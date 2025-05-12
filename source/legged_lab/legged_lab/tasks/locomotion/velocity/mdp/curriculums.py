@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Common functions that can be used to create curriculum for the learning environment.
 
 The functions can be passed to the :class:`isaaclab.managers.CurriculumTermCfg` object to enable
@@ -15,11 +20,11 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.terrains import TerrainImporter
 
 if TYPE_CHECKING:
-    from isaaclab.envs import RLTaskEnv
+    from isaaclab.envs import ManagerBasedRLEnv
 
 
 def terrain_levels_vel(
-    env: RLTaskEnv, env_ids: Sequence[int], asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+    env: ManagerBasedRLEnv, env_ids: Sequence[int], asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Curriculum based on the distance the robot walked when commanded to move at a desired velocity.
 
