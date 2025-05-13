@@ -6,6 +6,7 @@
 from isaaclab.utils import configclass
 
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
+from legged_lab.rsl_rl import RslRlPpoActorCriticConv2dCfg
 
 
 @configclass
@@ -46,3 +47,42 @@ class UnitreeGo2FlatPPORunnerCfg(UnitreeGo2RoughPPORunnerCfg):
         self.experiment_name = "unitree_go2_flat"
         self.policy.actor_hidden_dims = [128, 128, 128]
         self.policy.critic_hidden_dims = [128, 128, 128]
+
+
+@configclass
+class UnitreeGo2ScandotsRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+    
+    num_steps_per_env = 24
+    max_iterations = 1500
+    save_interval = 100
+    experiment_name = "unitree_go2_scandots_rough"
+    empirical_normalization = False
+    
+    policy = RslRlPpoActorCriticConv2dCfg(
+        init_noise_std=0.5,
+        actor_hidden_dims=[128, 128],
+        critic_hidden_dims=[128, 128],
+        activation="elu",
+        conv_layers_params=[
+            {"out_channels": 2, "kernel_size": 3, "stride": 2},
+            {"out_channels": 4, "kernel_size": 3, "stride": 2},
+        ],
+        conv_linear_output_size=8,
+        # image_input_shape=(1, 17, 11),  # [C, H, W], should match the scene.height_scanner (RayCasterCfg)
+    )
+    
+    algorithm = RslRlPpoAlgorithmCfg(
+        value_loss_coef=1.0,
+        use_clipped_value_loss=True,
+        clip_param=0.2,
+        entropy_coef=0.005,
+        num_learning_epochs=5,
+        num_mini_batches=4,
+        learning_rate=1.0e-3,
+        schedule="adaptive",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=0.01,
+        max_grad_norm=1.0,
+    )
+    
