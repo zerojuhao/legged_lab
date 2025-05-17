@@ -49,7 +49,7 @@ import os
 import time
 import torch
 
-from rsl_rl.runners import OnPolicyRunner
+from rsl_rl.runners import OnPolicyRunner, OnPolicyRunnerConv2d
 
 from isaaclab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from isaaclab.utils.assets import retrieve_file_path
@@ -113,7 +113,10 @@ def main():
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
-    ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    if agent_cfg.policy.class_name == "ActorCriticConv2d":
+        ppo_runner = OnPolicyRunnerConv2d(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    else:
+        ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
     ppo_runner.load(resume_path)
 
     # obtain the trained policy for inference
@@ -138,7 +141,10 @@ def main():
     dt = env.unwrapped.step_dt
 
     # reset environment
-    obs, _ = env.get_observations()
+    obs, extras = env.get_observations()
+    if "sensor" in extras["observations"]:
+        image_obs = extras["observations"]["sensor"].permute(0, 3, 1, 2).flatten(start_dim=1)
+        obs = torch.cat([obs, image_obs], dim=1)
     timestep = 0
     # simulate environment
     while simulation_app.is_running():
@@ -148,7 +154,10 @@ def main():
             # agent stepping
             actions = policy(obs)
             # env stepping
-            obs, _, _, _ = env.step(actions)
+            obs, _, _, infos = env.step(actions)
+            if "sensor" in infos["observations"]:
+                image_obs = infos["observations"]["sensor"].permute(0, 3, 1, 2).flatten(start_dim=1)
+                obs = torch.cat([obs, image_obs], dim=1)
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video

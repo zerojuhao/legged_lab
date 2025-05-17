@@ -68,7 +68,6 @@ class UnitreeGo2ScandotsRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
             {"out_channels": 4, "kernel_size": 3, "stride": 2},
         ],
         conv_linear_output_size=8,
-        # image_input_shape=(1, 17, 11),  # [C, H, W], should match the scene.height_scanner (RayCasterCfg)
     )
     
     algorithm = RslRlPpoAlgorithmCfg(
