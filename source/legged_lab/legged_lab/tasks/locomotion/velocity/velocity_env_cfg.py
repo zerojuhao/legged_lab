@@ -5,6 +5,7 @@
 
 import math
 from dataclasses import MISSING
+import torch
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
@@ -29,6 +30,28 @@ import legged_lab.tasks.locomotion.velocity.mdp as mdp
 # Pre-defined configs
 ##
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
+
+
+##
+# Sensor settings
+##
+
+
+@configclass
+class RayCasterArrayCfg(RayCasterCfg):
+    
+    shape : tuple[int, int] = (-1, -1)
+    
+    def __post_init__(self):
+        resolution = self.pattern_cfg.resolution
+        size = self.pattern_cfg.size
+        
+        x = torch.arange(start=-size[0] / 2, end=size[0] / 2 + 1.0e-9, step=resolution)
+        y = torch.arange(start=-size[1] / 2, end=size[1] / 2 + 1.0e-9, step=resolution)
+        x_len = x.numel()
+        y_len = y.numel()
+        
+        self.shape = (x_len, y_len)
 
 
 ##
@@ -79,6 +102,22 @@ class MySceneCfg(InteractiveSceneCfg):
             intensity=750.0,
             texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
         ),
+    )
+
+
+@configclass
+class ScandotsSceneCfg(MySceneCfg):
+    """Configuration for the terrain scene with a legged robot.
+    Change height_scanner to self-defined RayCasterArrayCfg
+    """
+    
+    height_scanner = RayCasterArrayCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+        debug_vis=False,
+        mesh_prim_paths=["/World/ground"],
     )
 
 
@@ -144,6 +183,31 @@ class ObservationsCfg:
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
+
+
+@configclass
+class ScandotsObservationsCfg(ObservationsCfg):
+    @configclass
+    class SensorCfg(ObsGroup):
+        height_scan = ObsTerm(
+            func=mdp.height_scan_ch,
+            params={"sensor_cfg": SceneEntityCfg("height_scanner")},
+            noise=Unoise(n_min=-0.1, n_max=0.1),
+            clip=(-1.0, 1.0),
+        )
+        
+        def __post_init__(self):
+            self.enable_corruption = True
+        
+    sensor: SensorCfg = SensorCfg()
+    """configuration of scandots sensor.
+    it would be stored in extras["observations"]["sensor"] and further used in rsl_rl (modified)
+    refer to Isaac Lab's source/isaaclab_rl/isaaclab_rl/rsl_rl/vecenv_wrapper.py
+    """
+    
+    def __post_init__(self):
+        # height scan in SensorCfg, not in PolicyCfg
+        self.policy.height_scan = None
 
 
 @configclass
