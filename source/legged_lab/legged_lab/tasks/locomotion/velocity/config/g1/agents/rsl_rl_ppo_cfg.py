@@ -6,13 +6,13 @@
 from isaaclab.utils import configclass
 
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
-
+from legged_lab.rsl_rl import RslRlPpoActorCriticConv2dCfg
 
 @configclass
 class G1RoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 3000
-    save_interval = 50
+    save_interval = 100
     experiment_name = "g1_rough"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
@@ -46,3 +46,25 @@ class G1FlatPPORunnerCfg(G1RoughPPORunnerCfg):
         self.experiment_name = "g1_flat"
         self.policy.actor_hidden_dims = [256, 128, 128]
         self.policy.critic_hidden_dims = [256, 128, 128]
+
+
+@configclass
+class G1ScandotsRoughPPORunnerCfg(G1RoughPPORunnerCfg):
+    
+    policy = RslRlPpoActorCriticConv2dCfg(
+        init_noise_std=0.5,
+        actor_hidden_dims=[128, 128],
+        critic_hidden_dims=[128, 128],
+        activation="elu",
+        conv_layers_params=[
+            {"out_channels": 2, "kernel_size": 3, "stride": 2},
+            {"out_channels": 4, "kernel_size": 3, "stride": 2},
+        ],
+        conv_linear_output_size=8,
+    )
+    
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.max_iterations = 3000
+        self.experiment_name = "g1_scandots_rough"

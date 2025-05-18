@@ -1,88 +1,31 @@
 from __future__ import annotations
-
 import torch
 
 from isaaclab.utils import configclass
 
-from isaaclab.managers import ObservationGroupCfg as ObsGroup
-from isaaclab.managers import ObservationTermCfg as ObsTerm
-from isaaclab.managers import SceneEntityCfg
-from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
+from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import (
+    ScandotsObservationsCfg, 
+    ScandotsSceneCfg, 
+    LocomotionVelocityRoughEnvCfg
+)
 
 ##
 # Pre-defined configs
 ##
 from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
 
-from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import ObservationsCfg, MySceneCfg, LocomotionVelocityRoughEnvCfg
-import legged_lab.tasks.locomotion.velocity.mdp as mdp
 
+##
+# Environment configuration
+##
 
-@configclass
-class RayCasterArrayCfg(RayCasterCfg):
-    
-    shape : tuple[int, int] = (-1, -1)
-    
-    def __post_init__(self):
-        resolution = self.pattern_cfg.resolution
-        size = self.pattern_cfg.size
-        
-        x = torch.arange(start=-size[0] / 2, end=size[0] / 2 + 1.0e-9, step=resolution)
-        y = torch.arange(start=-size[1] / 2, end=size[1] / 2 + 1.0e-9, step=resolution)
-
-        x_len = x.numel()
-        y_len = y.numel()
-        
-        self.shape = (x_len, y_len)
-
-
-@configclass
-class ScandotsSceneCfg(MySceneCfg):
-    """Configuration for the terrain scene with a legged robot.
-    Change height_scanner to self-defined RayCasterArrayCfg
-    """
-    
-    height_scanner = RayCasterArrayCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.2, 0.0, 20.0)),    # offset, TODO: check it in viewer
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=False,
-        mesh_prim_paths=["/World/ground"],
-    )
-
-
-@configclass
-class ScandotsObservationsCfg(ObservationsCfg):
-    @configclass
-    class SensorCfg(ObsGroup):
-        height_scan = ObsTerm(
-            func=mdp.height_scan_ch,
-            params={"sensor_cfg": SceneEntityCfg("height_scanner")},
-            noise=Unoise(n_min=-0.1, n_max=0.1),
-            clip=(-1.0, 1.0),
-        )
-        
-        def __post_init__(self):
-            self.enable_corruption = True
-        
-    sensor: SensorCfg = SensorCfg()
-    """configuration of scandots sensor.
-    it would be stored in extras["observations"]["sensor"] and further used in rsl_rl (modified)
-    refer to Isaac Lab's source/isaaclab_rl/isaaclab_rl/rsl_rl/vecenv_wrapper.py
-    """
-    
-    def __post_init__(self):
-        # height scan in SensorCfg, not in PolicyCfg
-        self.policy.height_scan = None
 
 @configclass
 class UnitreeGo2ScandotsRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
     
     scene: ScandotsSceneCfg = ScandotsSceneCfg(num_envs=4096, env_spacing=2.5)
-    observations : ScandotsObservationsCfg = ScandotsObservationsCfg()
-    
+    observations: ScandotsObservationsCfg = ScandotsObservationsCfg()
+
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
@@ -90,9 +33,10 @@ class UnitreeGo2ScandotsRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.scene.robot = UNITREE_GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
         # scale down the terrains because the robot is small
-        self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.025, 0.1)
-        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.01, 0.06)
-        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
+        if self.scene.terrain.terrain_generator is not None:
+            self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.025, 0.1)
+            self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.01, 0.06)
+            self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
 
         # reduce action scale
         self.actions.joint_pos.scale = 0.25
