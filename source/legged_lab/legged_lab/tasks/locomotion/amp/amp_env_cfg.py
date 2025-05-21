@@ -1,0 +1,78 @@
+import math
+from dataclasses import MISSING
+import torch
+
+import isaaclab.sim as sim_utils
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import ObservationGroupCfg as ObsGroup
+from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import TerminationTermCfg as DoneTerm
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
+from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+
+import legged_lab.tasks.locomotion.amp.mdp as mdp
+
+from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import (
+    ObservationsCfg,
+    LocomotionVelocityRoughEnvCfg
+)
+
+
+@configclass
+class AmpObservationsCfg(ObservationsCfg):
+    
+    @configclass
+    class AmpCfg(ObsGroup):
+        # order: joint_pos, foot_pos, base_lin_vel, base_ang_vel, joint_vel, z_pos
+        
+        joint_pos: ObsTerm = ObsTerm(func=mdp.joint_pos)    # TODO: check with motion data: 1. order 2. absolute or relative
+        feet_pos: ObsTerm = ObsTerm(
+            func=mdp.feet_pos_b, 
+            params={
+                "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot")
+            }
+        )
+        base_lin_vel: ObsTerm = ObsTerm(func=mdp.base_lin_vel)
+        base_ang_vel: ObsTerm = ObsTerm(func=mdp.base_ang_vel)
+        joint_vel: ObsTerm = ObsTerm(func=mdp.joint_vel)    # TODO: check with motion data: 1. order 2. absolute or relative
+        z_pos: ObsTerm = ObsTerm(func=mdp.base_pos_z)
+    
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = False
+            self.history_length = 2
+            self.flatten_history_dim = False
+    
+    amp: AmpCfg = AmpCfg()
+    
+    
+@configclass
+class LocomotionAmpEnvCfg(LocomotionVelocityRoughEnvCfg):
+    """
+    Environment configuration for the AMP locomotion task.
+    """
+    observations: AmpObservationsCfg = AmpObservationsCfg()
+    
+    def __post_init__(self):
+        
+        # plane terrain
+        self.scene.terrain.terrain_type = "plane"
+        self.scene.terrain.terrain_generator = None
+        # no height scan
+        self.scene.height_scanner = None
+        self.observations.policy.height_scan = None
+        # no terrain curriculum
+        self.curriculum.terrain_levels = None
+        
+        super().__post_init__()
+        
+        
