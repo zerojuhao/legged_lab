@@ -234,7 +234,6 @@ class AmpEnv(ManagerBasedRLEnv):
         # note: done after reset to get the correct observations for reset envs
         self.obs_buf = self.observation_manager.compute()
         if len(reset_env_ids) > 0:
-            print("[INFO] Resetting envs: ", reset_env_ids)
             for term in amp_obs.keys():
                 # reset the observations for the reset envs
                 self.obs_buf["amp"][term][reset_env_ids] = amp_obs[term][reset_env_ids]
