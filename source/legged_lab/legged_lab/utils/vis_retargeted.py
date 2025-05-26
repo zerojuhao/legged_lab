@@ -28,6 +28,9 @@ import torch
 import joblib
 import yaml
 
+import carb
+import omni
+
 import isaacsim.core.utils.prims as prim_utils
 
 import isaaclab.sim as sim_utils
@@ -84,27 +87,36 @@ class RetargetedMotionLoader:
         self.current_motion_idx = 0
         self.current_motion_name = self.motion_names[self.current_motion_idx]
         
-        
         # load the config file
         self.retargeted_cfg = yaml.safe_load(open(self.config_file, "r"))
         self.retargeted_joint_names = self.retargeted_cfg["joint_names"]
-        self._get_joint_mapping(lab_joint_names, self.retargeted_joint_names)
         self.lab_joint_names = lab_joint_names
-        print(self.lab_joint_names.index("left_one_joint"), self.lab_joint_names.index("left_two_joint"))
-        print(self.lab_joint_names.index("right_one_joint"), self.lab_joint_names.index("right_two_joint"))
+        self._get_joint_mapping()
+        self.joint_offsets_dict = self.retargeted_cfg["joint_offsets"]
+        self.joint_offsets = np.zeros(len(self.lab_joint_names), dtype=np.float32)
+        # set the joint offsets
+        for joint_name, offset in self.joint_offsets_dict.items():
+            if joint_name in self.lab_joint_names:
+                idx = self.lab_joint_names.index(joint_name)
+                self.joint_offsets[idx] = np.deg2rad(offset)
+            else:
+                raise ValueError(f"Joint name {joint_name} in joint_offsets not found in lab joint names: {self.lab_joint_names}")
+                
+        # setup keyboard input
+        self.setup_keyboard()
 
-    def _get_joint_mapping(self, lab_joint_names: list[str], retargeted_joint_names: list[str]) -> dict:
+    def _get_joint_mapping(self) -> dict:
         """Get the joint index mapping from lab joint names to retargeted joint names, and vice versa."""
         # first check if there are any joint name not in both lists
-        for joint_name in lab_joint_names:
-            if joint_name not in retargeted_joint_names:
+        for joint_name in self.lab_joint_names:
+            if joint_name not in self.retargeted_joint_names:
                 raise ValueError(f"Joint name {joint_name} not found in retargeted joint names.")
-        for joint_name in retargeted_joint_names:
-            if joint_name not in lab_joint_names:
+        for joint_name in self.retargeted_joint_names:
+            if joint_name not in self.lab_joint_names:
                 raise ValueError(f"Joint name {joint_name} not found in lab joint names.")
-        
-        self.retargeted_to_lab_mapping = [retargeted_joint_names.index(joint_name) for joint_name in lab_joint_names]
-        self.lab_to_retargeted_mapping = [lab_joint_names.index(joint_name) for joint_name in retargeted_joint_names]
+
+        self.retargeted_to_lab_mapping = [self.retargeted_joint_names.index(joint_name) for joint_name in self.lab_joint_names]
+        self.lab_to_retargeted_mapping = [self.lab_joint_names.index(joint_name) for joint_name in self.retargeted_joint_names]
 
     def get_motion_data(self, current_frame: int, device):
         """Get the motion data for the current frame.
@@ -117,12 +129,8 @@ class RetargetedMotionLoader:
         root_quat = m_data['root_rot'][current_frame][[3, 0, 1, 2]] # w, x, y, z
         dof_pos = m_data['dof'][current_frame][self.retargeted_to_lab_mapping]
         
-        if self.robot_name == "g1":
-            # add offset to the left_one_joint and right_one_joint
-            dof_pos[self.lab_joint_names.index("left_one_joint")] += np.deg2rad(68)
-            dof_pos[self.lab_joint_names.index("left_two_joint")] += np.deg2rad(45)
-            dof_pos[self.lab_joint_names.index("right_one_joint")] -= np.deg2rad(68)
-            dof_pos[self.lab_joint_names.index("right_two_joint")] -= np.deg2rad(45)
+        # apply joint offsets
+        dof_pos += self.joint_offsets
         
         return torch.tensor(root_pos, device=device), \
                 torch.tensor(root_quat, device=device), \
@@ -132,7 +140,7 @@ class RetargetedMotionLoader:
         """Get the length of the motion data."""
         return len(self.motion_data[self.current_motion_name]['dof'])
     
-    def next_motion(self):
+    def _next_motion(self):
         """Get the next motion data."""
         self.current_motion_idx += 1
         if self.current_motion_idx >= len(self.motion_names):
@@ -140,12 +148,36 @@ class RetargetedMotionLoader:
         self.current_motion_name = self.motion_names[self.current_motion_idx]
         print(f"[INFO]: Current motion name: {self.current_motion_name}")
         
+    def _previous_motion(self):
+        """Get the previous motion data."""
+        self.current_motion_idx -= 1
+        if self.current_motion_idx < 0:
+            self.current_motion_idx = len(self.motion_names) - 1
+        self.current_motion_name = self.motion_names[self.current_motion_idx]
+        print(f"[INFO]: Current motion name: {self.current_motion_name}")
+        
+    def setup_keyboard(self):
+        """Setup keyboard input to switch between motions."""
+        self._input = carb.input.acquire_input_interface()
+        self._keyboard = omni.appwindow.get_default_app_window().get_keyboard()
+        self._sub_keyboard = self._input.subscribe_to_keyboard_events(self._keyboard, self._on_keyboard_event)
+        
+    def _on_keyboard_event(self, event: carb.input.KeyboardEvent) -> None:
+        """Handle keyboard events to switch between motions."""
+        if event.type == carb.input.KeyboardEventType.KEY_PRESS:
+            if event.input.name == "RIGHT":
+                self._next_motion()
+                print(f"[INFO]: Switched to next motion: {self.current_motion_name}")
+            elif event.input.name == "LEFT":
+                self._previous_motion()
+                print(f"[INFO]: Switched to previous motion: {self.current_motion_name}")
 
-def run_simulator(sim: sim_utils.SimulationContext, 
-                  robot: Articulation, 
+
+def run_simulator(sim: sim_utils.SimulationContext,
+                  robot: Articulation,
                   origin: torch.Tensor) -> None:
 
-    re_motion_loader = RetargetedMotionLoader(args_cli.robot, "0-ACCAD_Male1Walking_c3d_Walk B10 - Walk turn left 45_poses.pkl", robot.data.joint_names)
+    re_motion_loader = RetargetedMotionLoader(args_cli.robot, "my_walk.pkl", robot.data.joint_names)
     
     """Run the simulation loop"""
     # Define simulation stepping

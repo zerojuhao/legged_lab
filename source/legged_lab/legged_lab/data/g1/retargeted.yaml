@@ -15,3 +15,11 @@ joint_names: [
 ]
 
 
+joint_offsets:
+  # in [deg]
+  left_one_joint: 68
+  left_two_joint: 45
+  right_one_joint: -68
+  right_two_joint: -45
+
+
