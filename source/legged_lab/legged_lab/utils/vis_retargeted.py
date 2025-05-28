@@ -35,6 +35,7 @@ import isaacsim.core.utils.prims as prim_utils
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 
 from legged_lab import LEGGED_LAB_ROOT_DIR
 
@@ -65,6 +66,18 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     return robot, origin
 
 
+def define_markers() -> VisualizationMarkers:
+    marker_cfg = VisualizationMarkersCfg(
+        prim_path="/Visuals/myMarkers", 
+        markers={
+            "sphere": sim_utils.SphereCfg(
+                radius=0.05, 
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0))
+            )
+        }
+    )
+    return VisualizationMarkers(marker_cfg)
+
 class RetargetedMotionLoader:
     def __init__(self, robot_name: str, motion_file: str, lab_joint_names: list[str]) -> None:
         
@@ -89,7 +102,7 @@ class RetargetedMotionLoader:
         
         # load the config file
         self.retargeted_cfg = yaml.safe_load(open(self.config_file, "r"))
-        self.retargeted_joint_names = self.retargeted_cfg["joint_names"]
+        self.retargeted_joint_names = self.retargeted_cfg["retargeted_joint_names"]
         self.lab_joint_names = lab_joint_names
         self._get_joint_mapping()
         self.joint_offsets_dict = self.retargeted_cfg["joint_offsets"]
@@ -128,13 +141,15 @@ class RetargetedMotionLoader:
         root_pos = m_data['root_trans_offset'][current_frame]
         root_quat = m_data['root_rot'][current_frame][[3, 0, 1, 2]] # w, x, y, z
         dof_pos = m_data['dof'][current_frame][self.retargeted_to_lab_mapping]
-        
         # apply joint offsets
         dof_pos += self.joint_offsets
         
+        key_point_pos = m_data['smpl_joints'][current_frame]
+        
         return torch.tensor(root_pos, device=device), \
                 torch.tensor(root_quat, device=device), \
-                torch.tensor(dof_pos, device=device)
+                torch.tensor(dof_pos, device=device), \
+                torch.tensor(key_point_pos, device=device)
     
     def get_motion_length(self):
         """Get the length of the motion data."""
@@ -175,9 +190,14 @@ class RetargetedMotionLoader:
 
 def run_simulator(sim: sim_utils.SimulationContext,
                   robot: Articulation,
-                  origin: torch.Tensor) -> None:
+                  origin: torch.Tensor,
+                  markers: VisualizationMarkers) -> None:
 
     re_motion_loader = RetargetedMotionLoader(args_cli.robot, "my_walk.pkl", robot.data.joint_names)
+    
+    _, _, _, key_point_pos = re_motion_loader.get_motion_data(0, sim.device)
+    num_key_points = key_point_pos.shape[0]
+    marker_indices = torch.zeros(num_key_points, dtype=torch.int32, device=sim.device)
     
     """Run the simulation loop"""
     # Define simulation stepping
@@ -190,7 +210,7 @@ def run_simulator(sim: sim_utils.SimulationContext,
 
         current_time = int(sim_time / sim_dt) % re_motion_loader.get_motion_length()
         # get the motion data
-        root_pos, root_quat, dof_pos = re_motion_loader.get_motion_data(current_time, sim.device)
+        root_pos, root_quat, dof_pos, key_point_pos = re_motion_loader.get_motion_data(current_time, sim.device)
         robot_state = robot.data.default_root_state.clone()
         robot_state[:, :3] = origin + root_pos
         robot_state[:, 3:7] = root_quat
@@ -198,6 +218,8 @@ def run_simulator(sim: sim_utils.SimulationContext,
         joint_pos = robot.data.default_joint_pos.clone()
         joint_pos[:, :] = dof_pos
         robot.write_joint_position_to_sim(joint_pos)
+        
+        markers.visualize(key_point_pos, marker_indices=marker_indices)
         
         # only render, no physics
         sim.render()
@@ -219,12 +241,14 @@ def main():
     # design scene
     robot, origin = design_scene()
     origin = torch.tensor(origin, device=sim.device)
+    # Define markers
+    markers = define_markers()
     # Play the simulator
     sim.reset()
     # Now we are ready!
     print("[INFO]: Setup complete...")
     # Run the simulator
-    run_simulator(sim, robot, origin)
+    run_simulator(sim, robot, origin, markers)
 
 
 if __name__ == "__main__":
