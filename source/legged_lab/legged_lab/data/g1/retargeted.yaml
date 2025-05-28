@@ -1,10 +1,10 @@
 # This files contains some confgurations for the retargeted g1 dataset
 
 # The order of the joints obeys the mujoco convention. 
-# this lists can be obtained by running utils/print_mujoco_joint_names.py
+# this list can be obtained by running `utils/print_mujoco_joint_names.py`
 # note that the mjcf file comes from the PHC repo, which is not the same as
 # the official one from unitree
-joint_names: [
+retargeted_joint_names: [
   'left_hip_pitch_joint', 'left_hip_roll_joint', 'left_hip_yaw_joint', 'left_knee_joint', 'left_ankle_pitch_joint', 'left_ankle_roll_joint', 
   'right_hip_pitch_joint', 'right_hip_roll_joint', 'right_hip_yaw_joint', 'right_knee_joint', 'right_ankle_pitch_joint', 'right_ankle_roll_joint', 
   'torso_joint', 
@@ -14,12 +14,58 @@ joint_names: [
   'right_zero_joint', 'right_one_joint', 'right_two_joint', 'right_three_joint', 'right_four_joint', 'right_five_joint', 'right_six_joint'
 ]
 
-
+# add offsets to some joints, the order here does not matter
 joint_offsets:
   # in [deg]
   left_one_joint: 68
   left_two_joint: 45
   right_one_joint: -68
   right_two_joint: -45
+
+
+# lab joint names: 
+# this list can be obtained by running `utils/print_lab_joint_names.py`
+lab_joint_names: [
+  'left_hip_pitch_joint', 'right_hip_pitch_joint', 
+  'torso_joint', 
+  'left_hip_roll_joint', 'right_hip_roll_joint', 
+  'left_shoulder_pitch_joint', 'right_shoulder_pitch_joint', 
+  'left_hip_yaw_joint', 'right_hip_yaw_joint', 
+  'left_shoulder_roll_joint', 'right_shoulder_roll_joint', 
+  'left_knee_joint', 'right_knee_joint', 
+  'left_shoulder_yaw_joint', 'right_shoulder_yaw_joint', 
+  'left_ankle_pitch_joint', 'right_ankle_pitch_joint', 
+  'left_elbow_pitch_joint', 'right_elbow_pitch_joint', 
+  'left_ankle_roll_joint', 'right_ankle_roll_joint', 
+  'left_elbow_roll_joint', 'right_elbow_roll_joint', 
+  'left_five_joint', 'left_three_joint', 
+  'left_zero_joint', 'right_five_joint', 
+  'right_three_joint', 'right_zero_joint', 
+  'left_six_joint', 'left_four_joint', 
+  'left_one_joint', 'right_six_joint', 
+  'right_four_joint', 'right_one_joint', 
+  'left_two_joint', 'right_two_joint'
+]
+
+
+# motion weights
+# there are different motions in one motion data file, and each motion has a different weight
+# the motion names can be obtained by running `utils/print_motion_names.py`
+motion_weights: 
+  "0-walk_B10 -  Walk turn left 45_poses": 1.0
+  "0-walk_B11 -  Walk turn left 135_poses": 1.0
+  "0-walk_B13 -  Walk turn right 90_poses": 1.0
+  "0-walk_B14 -  Walk turn right 45 t2_poses": 1.0
+  "0-walk_B15 -  Walk turn around_poses": 1.0
+  "0-walk_B4 - Stand to Walk backwards_poses": 1.0
+  "0-walk_B5 -  Walk backwards_poses": 1.0
+  "0-walk_B9 -  Walk turn left 90_poses": 1.0
+  "0-walk_Walk B10 - Walk turn left 45_poses": 1.0
+  "0-walk_Walk B13 - Walk turn right 45_poses": 1.0
+  "0-walk_Walk B15 - Walk turn around_poses": 1.0
+  "0-walk_Walk B16 - Walk turn change_poses": 1.0
+  "0-walk_Walk B4 - Stand to Walk Back_poses": 1.0
+
+
 
 
