@@ -69,7 +69,6 @@ if __name__ == "__main__":
     
     sim.reset()
     
-    lab_joint_names = robot.data.joint_names
+    lab_joint_names = robot.joint_names
     print("Legged Lab joint names:")
     print(lab_joint_names)
-    

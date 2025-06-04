@@ -10,6 +10,12 @@ parser.add_argument(
     default="g1",
     help="The robot name to be used.",
 )
+parser.add_argument(
+    "--motion_file",
+    type=str,
+    default="retargeted_motion.pkl",
+    help="File name of the motion data to be loaded.",
+)
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -45,7 +51,8 @@ from legged_lab import LEGGED_LAB_ROOT_DIR
 if args_cli.robot == "g1":
     from isaaclab_assets import G1_MINIMAL_CFG as ROBOT_CFG  # isort: skip
 elif args_cli.robot == "h1":
-    from isaaclab_assets import H1_MINIMAL_CFG as ROBOT_CFG
+    # from isaaclab_assets import H1_MINIMAL_CFG as ROBOT_CFG
+    raise NotImplementedError("H1 robot is not yet supported in this script.")
 else:
     raise ValueError(f"Robot {args_cli.robot} not supported.")
 
@@ -70,10 +77,14 @@ def define_markers() -> VisualizationMarkers:
     marker_cfg = VisualizationMarkersCfg(
         prim_path="/Visuals/myMarkers", 
         markers={
-            "sphere": sim_utils.SphereCfg(
-                radius=0.05, 
+            "red_sphere": sim_utils.SphereCfg(
+                radius=0.03, 
                 visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0))
-            )
+            ), 
+            "green_sphere": sim_utils.SphereCfg(
+                radius=0.03, 
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
+            ),
         }
     )
     return VisualizationMarkers(marker_cfg)
@@ -94,17 +105,19 @@ class RetargetedMotionLoader:
             raise FileNotFoundError(f"Config file {self.config_file} does not exist, please check the file.")
         
         # load the motion data
-        self.motion_data = joblib.load(self.motion_file)
+        motion_dict = joblib.load(self.motion_file)
+        self.motion_data = motion_dict["retarget_data"]
         self.motion_names = list(self.motion_data.keys())
         print(f"[INFO]: Motion names: {self.motion_names}")
         self.current_motion_idx = 0
         self.current_motion_name = self.motion_names[self.current_motion_idx]
         
-        # load the config file
-        self.retargeted_cfg = yaml.safe_load(open(self.config_file, "r"))
-        self.retargeted_joint_names = self.retargeted_cfg["retargeted_joint_names"]
+        self.retargeted_joint_names = motion_dict["dof_names"]
         self.lab_joint_names = lab_joint_names
         self._get_joint_mapping()
+        
+        # load the config file
+        self.retargeted_cfg = yaml.safe_load(open(self.config_file, "r"))
         self.joint_offsets_dict = self.retargeted_cfg["joint_offsets"]
         self.joint_offsets = np.zeros(len(self.lab_joint_names), dtype=np.float32)
         # set the joint offsets
@@ -138,22 +151,24 @@ class RetargetedMotionLoader:
             current_frame (int): The frame index of the motion data.
         """
         m_data = self.motion_data[self.current_motion_name]
-        root_pos = m_data['root_trans_offset'][current_frame]
+        root_pos = m_data['root_pos'][current_frame]
         root_quat = m_data['root_rot'][current_frame][[3, 0, 1, 2]] # w, x, y, z
-        dof_pos = m_data['dof'][current_frame][self.retargeted_to_lab_mapping]
+        dof_pos = m_data['dof_pos'][current_frame][self.retargeted_to_lab_mapping]
         # apply joint offsets
         dof_pos += self.joint_offsets
         
-        key_point_pos = m_data['smpl_joints'][current_frame]
+        joint_pos_smpl = m_data['joint_pos_smpl'][current_frame]
+        joint_pos_robot = m_data['joint_pos_robot'][current_frame]
         
         return torch.tensor(root_pos, device=device), \
                 torch.tensor(root_quat, device=device), \
                 torch.tensor(dof_pos, device=device), \
-                torch.tensor(key_point_pos, device=device)
-    
+                torch.tensor(joint_pos_smpl, device=device), \
+                torch.tensor(joint_pos_robot, device=device)
+
     def get_motion_length(self):
         """Get the length of the motion data."""
-        return len(self.motion_data[self.current_motion_name]['dof'])
+        return len(self.motion_data[self.current_motion_name]['dof_pos'])
     
     def _next_motion(self):
         """Get the next motion data."""
@@ -193,11 +208,15 @@ def run_simulator(sim: sim_utils.SimulationContext,
                   origin: torch.Tensor,
                   markers: VisualizationMarkers) -> None:
 
-    re_motion_loader = RetargetedMotionLoader(args_cli.robot, "my_walk.pkl", robot.data.joint_names)
-    
-    _, _, _, key_point_pos = re_motion_loader.get_motion_data(0, sim.device)
-    num_key_points = key_point_pos.shape[0]
-    marker_indices = torch.zeros(num_key_points, dtype=torch.int32, device=sim.device)
+    re_motion_loader = RetargetedMotionLoader(args_cli.robot, args_cli.motion_file, robot.data.joint_names)
+
+    _, _, _, joint_pos_smpl, joint_pos_robot = re_motion_loader.get_motion_data(0, sim.device)
+    # num_key_points = joint_pos_smpl.shape[0]
+    # marker_indices = torch.zeros(num_key_points, dtype=torch.int32, device=sim.device)
+    num_joint_smpl = joint_pos_smpl.shape[0]
+    num_joint_robot = joint_pos_robot.shape[0]
+    marker_indices = torch.zeros(num_joint_smpl+num_joint_robot, dtype=torch.int32, device=sim.device)
+    marker_indices[num_joint_smpl:] = 1
     
     """Run the simulation loop"""
     # Define simulation stepping
@@ -210,7 +229,7 @@ def run_simulator(sim: sim_utils.SimulationContext,
 
         current_time = int(sim_time / sim_dt) % re_motion_loader.get_motion_length()
         # get the motion data
-        root_pos, root_quat, dof_pos, key_point_pos = re_motion_loader.get_motion_data(current_time, sim.device)
+        root_pos, root_quat, dof_pos, joint_pos_smpl, joint_pos_robot = re_motion_loader.get_motion_data(current_time, sim.device)
         robot_state = robot.data.default_root_state.clone()
         robot_state[:, :3] = origin + root_pos
         robot_state[:, 3:7] = root_quat
@@ -219,7 +238,10 @@ def run_simulator(sim: sim_utils.SimulationContext,
         joint_pos[:, :] = dof_pos
         robot.write_joint_position_to_sim(joint_pos)
         
-        markers.visualize(key_point_pos, marker_indices=marker_indices)
+        markers.visualize(
+            torch.cat([joint_pos_smpl, joint_pos_robot], dim=0),
+            marker_indices=marker_indices
+        )
         
         # only render, no physics
         sim.render()

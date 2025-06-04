@@ -52,19 +52,9 @@ lab_joint_names: [
 # there are different motions in one motion data file, and each motion has a different weight
 # the motion names can be obtained by running `utils/print_motion_names.py`
 motion_weights: 
-  "0-walk_B10 -  Walk turn left 45_poses": 1.0
-  "0-walk_B11 -  Walk turn left 135_poses": 1.0
-  "0-walk_B13 -  Walk turn right 90_poses": 1.0
-  "0-walk_B14 -  Walk turn right 45 t2_poses": 1.0
-  "0-walk_B15 -  Walk turn around_poses": 1.0
-  "0-walk_B4 - Stand to Walk backwards_poses": 1.0
-  "0-walk_B5 -  Walk backwards_poses": 1.0
-  "0-walk_B9 -  Walk turn left 90_poses": 1.0
-  "0-walk_Walk B10 - Walk turn left 45_poses": 1.0
-  "0-walk_Walk B13 - Walk turn right 45_poses": 1.0
-  "0-walk_Walk B15 - Walk turn around_poses": 1.0
-  "0-walk_Walk B16 - Walk turn change_poses": 1.0
-  "0-walk_Walk B4 - Stand to Walk Back_poses": 1.0
+  "Walk_B10___Walk_turn_left_45_poses": 1.0
+  "Walk_B13___Walk_turn_right_45_poses": 1.0
+  "Walk_B15___Walk_turn_around_poses": 1.0
 
 
 

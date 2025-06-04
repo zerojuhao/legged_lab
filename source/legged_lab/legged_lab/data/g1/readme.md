@@ -1,3 +1,4 @@
-The mocap data is from the [AMASS](https://amass.is.tue.mpg.de/) dataset and retargeted by [PHC](https://github.com/ZhengyiLuo/PHC). 
+The retargeted data is from [motion_retarget](https://github.com/zitongbai/motion_retarget)
 
-Please refer to the corresponding paper for more details. 
+Please refer to the original repository for more details on the data collection and processing. 
+And then copy the retargeted data to this directory.
