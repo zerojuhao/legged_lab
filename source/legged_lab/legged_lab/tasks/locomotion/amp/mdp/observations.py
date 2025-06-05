@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation
 from isaaclab.managers import SceneEntityCfg
+from isaaclab.sensors import FrameTransformer
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
@@ -25,4 +26,19 @@ def feet_pos_b(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg(
     feet_pos_b = math_utils.quat_rotate_inverse(base_quat_w.unsqueeze(1), feet_pos_w - base_pos_w.unsqueeze(1))
     return feet_pos_b.reshape(base_pos_w.shape[0], -1)
 
+def key_links_pos(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("frame_transformer")):
+    """Get the position of the key links in the base frame.
+
+    Args:
+        env (ManagerBasedEnv): The environment instance.
+        asset_cfg (SceneEntityCfg, optional): The configuration for the asset. Defaults to SceneEntityCfg("frame_transformer").
+
+    Returns:
+        torch.Tensor: Position of the key links relative to source frame. Shape is (N, M*3), 
+                    where N is the number of environments, and M is the number of target frames.
+    """
+    
+    sensor: FrameTransformer = env.scene.sensors[asset_cfg.name]
+    num_envs = env.scene.num_envs
+    return sensor.data.target_pos_source.reshape(num_envs, -1)
 

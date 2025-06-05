@@ -6,9 +6,10 @@
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
+from isaaclab.sensors import FrameTransformer, FrameTransformerCfg, OffsetCfg
 
 import legged_lab.tasks.locomotion.velocity.mdp as mdp
-from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import RewardsCfg
+from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import RewardsCfg, MySceneCfg
 from legged_lab.tasks.locomotion.amp.amp_env_cfg import LocomotionAmpEnvCfg
 
 ##
@@ -16,6 +17,46 @@ from legged_lab.tasks.locomotion.amp.amp_env_cfg import LocomotionAmpEnvCfg
 ##
 from isaaclab_assets import G1_MINIMAL_CFG  # isort: skip
 
+
+@configclass
+class G1AmpSceneCfg(MySceneCfg):
+    frame_transformer = FrameTransformerCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/torso_link",
+        target_frames=[
+            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/pelvis"),
+            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_hip_pitch_link"),
+            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_knee_link"),
+            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_ankle_roll_link"),
+            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_shoulder_roll_link"),
+            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_elbow_pitch_link"),
+            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_zero_link"),
+            FrameTransformerCfg.FrameCfg(
+                prim_path="{ENV_REGEX_NS}/Robot/pelvis", 
+                name="head_link", 
+                offset=OffsetCfg(
+                    pos=(0.0, 0.0, 0.4), 
+                    rot=(1.0, 0.0, 0.0, 0.0)
+                )
+            ),
+            FrameTransformerCfg.FrameCfg(
+                prim_path="{ENV_REGEX_NS}/Robot/left_ankle_roll_link",
+                name="left_toe_link",
+                offset=OffsetCfg(
+                    pos=(0.08, 0.0, 0.0), 
+                    rot=(1.0, 0.0, 0.0, 0.0)
+                )
+            ),
+            FrameTransformerCfg.FrameCfg(
+                prim_path="{ENV_REGEX_NS}/Robot/right_ankle_roll_link",
+                name="right_toe_link",
+                offset=OffsetCfg(
+                    pos=(0.08, 0.0, 0.0),
+                    rot=(1.0, 0.0, 0.0, 0.0)
+                )
+            ),
+        ], 
+        debug_vis=False
+    )
 
 @configclass
 class G1AmpRewards(RewardsCfg):
@@ -104,16 +145,13 @@ class G1AmpRewards(RewardsCfg):
 @configclass
 class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
     rewards: G1AmpRewards = G1AmpRewards()
+    scene: G1AmpSceneCfg = G1AmpSceneCfg(num_envs=4096, env_spacing=2.5)
 
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
         # Scene
         self.scene.robot = G1_MINIMAL_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-
-        # Observations
-        # TODO: check which links are used in AMP observations
-        self.observations.amp.feet_pos.params["asset_cfg"].body_names = ".*_ankle_roll_link"
         
         # Events
         self.events.push_robot = None

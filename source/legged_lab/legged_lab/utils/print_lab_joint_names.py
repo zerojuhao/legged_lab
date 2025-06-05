@@ -72,3 +72,7 @@ if __name__ == "__main__":
     lab_joint_names = robot.joint_names
     print("Legged Lab joint names:")
     print(lab_joint_names)
+
+    body_names = robot.body_names
+    print("Legged Lab body names:")
+    print(body_names)
