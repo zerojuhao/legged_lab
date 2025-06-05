@@ -19,8 +19,12 @@ import torch
 
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.assets import Articulation
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+from isaaclab.markers.config import FRAME_MARKER_CFG
+import isaaclab.utils.math as math_utils
+import isaaclab.sim as sim_utils
 
-from legged_lab.tasks.locomotion.velocity.config.g1.flat_env_cfg import G1FlatEnvCfg
+from legged_lab.tasks.locomotion.amp.config.g1.amp_flat_env_cfg import G1AmpFlatEnvCfg
 from legged_lab.tasks.locomotion.amp.utils_amp.motion_loader import MotionLoader
 from legged_lab import LEGGED_LAB_ROOT_DIR
 
@@ -28,7 +32,7 @@ import os
 
 def main():
     
-    env_cfg = G1FlatEnvCfg()
+    env_cfg = G1AmpFlatEnvCfg()
     env_cfg.scene.num_envs = args_cli.num_envs
     env_cfg.sim.device = args_cli.device
     env_cfg.sim.dt = 0.01  # Set simulation time step
@@ -47,9 +51,21 @@ def main():
     motion_loader = MotionLoader(
         motion_file=motion_file_path,
         cfg_file=motion_cfg_path,
-        entity=env.scene["robot"],
+        env=env,
         device=args_cli.device
     )
+    
+    # marker_cfg:VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/FrameVisualizerFromScript")
+    marker_cfg = VisualizationMarkersCfg(
+        prim_path="/Visuals/FrameVisualizerFromScript",
+        markers={
+            "red_sphere": sim_utils.SphereCfg(
+                radius=0.03, 
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0))
+            ),
+        }
+    )
+    marker_vis = VisualizationMarkers(marker_cfg)
     
     motion_ids = motion_loader.sample_motions(args_cli.num_envs)
     print("Sampled motion IDs:", motion_ids)
@@ -71,6 +87,14 @@ def main():
             root_pos = motion_data["root_pos_w"]
             root_quat = motion_data["root_quat"]
             dof_pos = motion_data["dof_pos"]
+            
+            key_links_pos_b = motion_data["key_links_pos_b"]    # shape: (N, M, 3), N is number of envs, M is number of key links
+            key_links_pos_w = root_pos.unsqueeze(1) + math_utils.quat_rotate(root_quat.unsqueeze(1), key_links_pos_b)
+            key_links_pos_w += env_origins.unsqueeze(1)  # add environment origins
+            
+            marker_vis.visualize(
+                translations=key_links_pos_w.view(-1, 3)
+            )
             
             robot_root_state = robot.data.default_root_state.clone()
             robot_root_state[:, :3] = root_pos + env_origins

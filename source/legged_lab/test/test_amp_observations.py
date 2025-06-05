@@ -42,21 +42,7 @@ def main():
     
     while simulation_app.is_running():
         with torch.inference_mode():
-            
-            # if count % 50 == 1:
-            #     amp_obs_dict = obs["amp"]
-            #     amp_obs = torch.cat(list(amp_obs_dict.values()), dim=-1).reshape(args_cli.num_envs, -1)
-            #     print("amp observations shape", amp_obs.shape)
-                
-            #     feet_pos_in_dict = amp_obs_dict["feet_pos"][0, 1, :].reshape(-1, 3)
-            #     feet_pos_in_tensor = amp_obs[0, 43+12:43+24].reshape(-1, 3)
-            #     print("feet pos in dict\n", feet_pos_in_dict)
-            #     print("feet pos in tensor\n", feet_pos_in_tensor)
-            #     print("feet pos in dict == feet pos in tensor: ", torch.allclose(feet_pos_in_dict, feet_pos_in_tensor))
-
-            # action = torch.randn_like(env.action_manager.action)
-            # obs, rew, terminated, truncated, info = env.step(action)
-            
+                        
             robot:Articulation = env.scene["robot"]
             action = robot.data.default_joint_pos.clone()
             

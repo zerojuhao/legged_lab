@@ -9,6 +9,8 @@ import joblib
 import isaaclab.utils.math as math_utils
 import isaaclab.utils.string as string_utils
 from isaaclab.assets import Articulation
+from isaaclab.envs import ManagerBasedEnv
+from isaaclab.sensors import FrameTransformer
 
 @torch.jit.script
 def vel_forward_diff(data: torch.Tensor, dt: float) -> torch.Tensor:
@@ -65,15 +67,17 @@ class MotionLoader:
 
     The retargeting process is performed using [motion_retarget](https://github.com/zitongbai/motion_retarget)
     
+    The example of usage can be found in `source/legged_lab/test/test_motion_loader.py`
+    
     Args: 
         motion_file (str): Path to the motion data file.
         cfg_file (str): Path to the configuration file for the motion data. This is a YAML file that
             contains the necessary parameters for loading the motion data.
         device (str): Device to load the motion data onto, default is "cuda:0".
     """
-    def __init__(self, motion_file, cfg_file, entity: Articulation, device: str = "cuda:0") -> None:
+    def __init__(self, motion_file, cfg_file, env: ManagerBasedEnv, device: str = "cuda:0") -> None:
         self.device = device
-        self.entity = entity
+        self.env = env
 
         assert os.path.exists(motion_file), f"[MotionLoader] Motion file {motion_file} does not exist, please check the file."
         assert os.path.exists(cfg_file), f"[MotionLoader] Config file {cfg_file} does not exist, please check the file."
@@ -90,8 +94,8 @@ class MotionLoader:
 
     def _build_joint_mapping(self):
         """Get the joint index mapping from lab joint names to retargeted joint names, and vice versa."""
-        
-        self.lab_joint_names = self.entity.joint_names
+        robot:Articulation = self.env.scene["robot"]
+        self.lab_joint_names = robot.joint_names
         if "joint_mapping" in self.cfg:
             # if joint names in retarget motion data are different from the lab joint names,
             # we need to load the joint mapping from the config file
@@ -109,6 +113,27 @@ class MotionLoader:
             except ValueError as e:
                 print(f"[MotionLoader] Error in resolving joint names: {e}")
                 raise ValueError(f"[MotionLoader] Joint names in retargeted motion data {self.retargeted_joint_names} do not match the lab joint names {self.lab_joint_names}.")
+
+    def _build_key_links_mapping(self):
+        frame_transformer: FrameTransformer = self.env.scene.sensors["frame_transformer"]
+        self.lab_key_links_names = frame_transformer.data.target_frame_names
+        
+        if "key_links_mapping" in self.cfg:
+            # if key links names in retarget motion data are different from the lab key links names,
+            # we need to load the key links mapping from the config file
+            raise NotImplementedError("Key links mapping from config file is not implemented yet.")
+        else:
+            # else, we assume the key links names in the retargeted motion data are the same as the lab key links names, 
+            # and we only need to rearrange them to match the order in the lab key links names
+            try:
+                self.retargeted_key_links_mapping, _ = string_utils.resolve_matching_names(
+                    keys=self.lab_key_links_names, 
+                    list_of_strings=self.retargeted_link_names,
+                    preserve_order=True
+                )
+            except ValueError as e:
+                print(f"[MotionLoader] Error in resolving key links names: {e}")
+                raise ValueError(f"[MotionLoader] Key links names in retargeted motion data {self.retargeted_link_names} do not match the lab key links names {self.lab_key_links_names}.")
 
     def _load_joint_offsets(self):
         """Load the joint offsets from the configuration file."""
@@ -134,8 +159,10 @@ class MotionLoader:
         motion_dict = joblib.load(self.motion_file)
         self.motion_data_dict = motion_dict["retarget_data"]
         self.retargeted_joint_names = motion_dict["dof_names"]
+        self.retargeted_link_names = motion_dict["joint_names_robot"]
         
         self._build_joint_mapping()
+        self._build_key_links_mapping()
         self._load_joint_offsets()
 
         self.motion_weights_dict = self.cfg.get("motion_weights", None)
@@ -230,8 +257,9 @@ class MotionLoader:
         # joint velocity, shape (num_frames, num_joints)
         dof_vel = vel_forward_diff(dof_pos, dt)
         
-        # key end effectors position
-        # TODO
+        # key links position TODO: use `joint_pos_robot` or `joint_pos_smpl`?
+        key_links_pos_w = motion_raw_data["joint_pos_robot"][:, self.retargeted_key_links_mapping, :]
+        key_links_pos_w = torch.tensor(key_links_pos_w, dtype=torch.float32, device=self.device, requires_grad=False)
         
         return {
             "root_pos_w": root_pos_w,
@@ -241,7 +269,8 @@ class MotionLoader:
             "root_ang_vel_w": root_ang_vel_w,
             # "root_ang_vel_b": root_ang_vel_b,
             "dof_pos": dof_pos,
-            "dof_vel": dof_vel
+            "dof_vel": dof_vel,
+            "key_links_pos_w": key_links_pos_w,
         }
         
     def get_total_duration(self) -> float:
@@ -318,6 +347,8 @@ class MotionLoader:
         dof_pos_1 = torch.empty([n, len(self.lab_joint_names)], dtype=torch.float32, device=self.device)
         dof_vel_0 = torch.empty([n, len(self.lab_joint_names)], dtype=torch.float32, device=self.device)
         dof_vel_1 = torch.empty([n, len(self.lab_joint_names)], dtype=torch.float32, device=self.device)
+        key_links_pos_w_0 = torch.empty([n, len(self.lab_key_links_names), 3], dtype=torch.float32, device=self.device)
+        key_links_pos_w_1 = torch.empty([n, len(self.lab_key_links_names), 3], dtype=torch.float32, device=self.device)
 
         motion_durations = self.motion_duration[motion_ids]
         num_frames = self.motion_num_frames[motion_ids]
@@ -349,6 +380,9 @@ class MotionLoader:
             dof_vel_0[ids, :] = motion["dof_vel"][frame_idx0[ids], :]
             dof_vel_1[ids, :] = motion["dof_vel"][frame_idx1[ids], :]
             
+            key_links_pos_w_0[ids, :, :] = motion["key_links_pos_w"][frame_idx0[ids], :, :]
+            key_links_pos_w_1[ids, :, :] = motion["key_links_pos_w"][frame_idx1[ids], :, :]
+            
         # interpolate the values
         blend = blend.unsqueeze(-1)  # make it (n, 1) for broadcasting
         
@@ -363,6 +397,8 @@ class MotionLoader:
         root_ang_vel_b = math_utils.quat_rotate_inverse(root_quat, root_ang_vel_w)
         dof_pos = dof_pos_0 * (1.0 - blend) + dof_pos_1 * blend
         dof_vel = dof_vel_0 * (1.0 - blend) + dof_vel_1 * blend
+        key_links_pos_w = key_links_pos_w_0 * (1.0 - blend.unsqueeze(1)) + key_links_pos_w_1 * blend.unsqueeze(1)
+        key_links_pos_b = math_utils.quat_rotate_inverse(root_quat.unsqueeze(1), key_links_pos_w - root_pos_w.unsqueeze(1))
         
         return {
             "root_pos_w": root_pos_w,
@@ -372,7 +408,8 @@ class MotionLoader:
             "root_ang_vel_w": root_ang_vel_w,
             "root_ang_vel_b": root_ang_vel_b,
             "dof_pos": dof_pos,
-            "dof_vel": dof_vel
+            "dof_vel": dof_vel,
+            "key_links_pos_b": key_links_pos_b
         }
 
     def _calc_frame_blend(self, time, duration, num_frames, dt):
