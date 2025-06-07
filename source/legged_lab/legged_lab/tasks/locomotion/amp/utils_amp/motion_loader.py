@@ -318,7 +318,7 @@ class MotionLoader:
         motion_ids = np.random.choice(m, size=n, replace=True, p=self.motion_weights)
         return motion_ids
     
-    def sample_time(self, motion_ids, truncate_time=None):
+    def sample_times(self, motion_ids, truncate_time=None):
 
         phase = np.random.uniform(low=0.0, high=1.0, size=motion_ids.shape)
         
@@ -429,3 +429,80 @@ class MotionLoader:
         blend = torch.from_numpy(blend).to(self.device).float()
 
         return frame_idx0, frame_idx1, blend
+    
+    def mini_batch_generator(self, num_transitions_per_env, num_mini_batches, num_epochs=8):
+        
+        dt = self.env.cfg.sim.dt * self.env.cfg.decimation # TODO: use self.env.cfg.sim.dt or self.env.sim.get_physics_dt() ?
+        num_envs = self.env.scene.num_envs
+
+        batch_size = num_transitions_per_env * num_envs
+        mini_batch_size = batch_size // num_mini_batches
+        
+        if batch_size % num_mini_batches != 0:
+            raise ValueError(f"Epoch batch size {batch_size} is not divisible by number of mini-batches {num_mini_batches}.")
+
+        motion_ids = self.sample_motions(batch_size)
+        motion_times = self.sample_times(motion_ids, truncate_time=dt)
+        motion_next_times = motion_times + dt
+        
+        # get the observation terms to extract from the motion state
+        amp_obs_terms = self.env.observation_manager.active_terms["amp"]
+        extract_funcs = []
+        for term in amp_obs_terms:
+            func_name = f"_extract_{term}"
+            if hasattr(self, func_name):
+                extract_funcs.append(getattr(self, func_name))
+            else:
+                raise ValueError(f"[MotionLoader] Observation term '{term}' is not supported, please check the observation terms in the config file.")
+        
+        for epoch in range(num_epochs):
+            indices = torch.randperm(batch_size, requires_grad=False, device=self.device)
+            for i in range(num_mini_batches):
+                start = i * mini_batch_size
+                end = (i + 1) * mini_batch_size
+                mini_batch_idx = indices[start:end]
+                
+                motion_state_dict = self.get_motion_state(
+                    motion_ids[mini_batch_idx], 
+                    motion_times[mini_batch_idx]
+                )
+                motion_next_state_dict = self.get_motion_state(
+                    motion_ids[mini_batch_idx], 
+                    motion_next_times[mini_batch_idx]
+                )
+                
+                motion_state = []
+                motion_next_state = []
+                for func in extract_funcs:
+                    motion_state.append(func(motion_state_dict))
+                    motion_next_state.append(func(motion_next_state_dict))
+                motion_state_tensor = torch.cat(motion_state, dim=-1).to(self.device)  # (N, D), where D is the total dimension of the motion state
+                motion_next_state_tensor = torch.cat(motion_next_state, dim=-1).to(self.device)  # (N, D), where D is the total dimension of the motion state
+                
+                motion_two_state_tensor = torch.cat([motion_state_tensor, motion_next_state_tensor], dim=1)  # (N, 2*D)
+                yield motion_two_state_tensor
+
+
+    def _extract_dof_pos(self, motion_state: dict) -> torch.Tensor:
+        """Extract the dof position from the motion state."""
+        return motion_state["dof_pos"]  # (N, num_dof)
+    
+    def _extract_dof_vel(self, motion_state: dict) -> torch.Tensor:
+        """Extract the dof velocity from the motion state."""
+        return motion_state["dof_vel"]  # (N, num_dof)
+    
+    def _extract_base_lin_vel_b(self, motion_state: dict) -> torch.Tensor:
+        """Extract the base linear velocity in body frame from the motion state."""
+        return motion_state["root_vel_b"]   # (N, 3)
+    
+    def _extract_base_ang_vel_b(self, motion_state: dict) -> torch.Tensor:
+        """Extract the base angular velocity in body frame from the motion state."""
+        return motion_state["root_ang_vel_b"]   # (N, 3)
+    
+    def _extract_base_pos_z(self, motion_state: dict) -> torch.Tensor:
+        return motion_state["root_pos_w"][:, 2].unsqueeze(-1)  # (N, 1)
+
+    def _extract_key_links_pos_b(self, motion_state: dict) -> torch.Tensor:
+        """Extract the key links position in body frame from the motion state."""
+        return motion_state["key_links_pos_b"].flatten(start_dim=1)  # (N, M*3), where M is the number of key links, and 3 is the x, y, z position in body frame
+    

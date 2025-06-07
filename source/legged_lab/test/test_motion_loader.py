@@ -71,6 +71,8 @@ def main():
     print("Sampled motion IDs:", motion_ids)
     motion_durations = motion_loader.get_motion_duration(motion_ids)
 
+    print(env.observation_manager.active_terms["amp"])
+    
     sim_dt = env.sim.get_physics_dt()
     print("Simulation DT:", sim_dt)
     sim_time = 0.0

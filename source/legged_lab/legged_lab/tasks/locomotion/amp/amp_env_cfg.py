@@ -31,21 +31,7 @@ from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import (
 class AmpObservationsCfg(ObservationsCfg):
     
     @configclass
-    class AmpCfg(ObsGroup):
-        # # order: joint_pos, foot_pos, base_lin_vel, base_ang_vel, joint_vel, z_pos
-        
-        # joint_pos: ObsTerm = ObsTerm(func=mdp.joint_pos)
-        # feet_pos: ObsTerm = ObsTerm(
-        #     func=mdp.feet_pos_b, 
-        #     params={
-        #         "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot")
-        #     }
-        # )
-        # base_lin_vel: ObsTerm = ObsTerm(func=mdp.base_lin_vel)
-        # base_ang_vel: ObsTerm = ObsTerm(func=mdp.base_ang_vel)
-        # joint_vel: ObsTerm = ObsTerm(func=mdp.joint_vel)    # TODO: check with motion data: 1. order 2. absolute or relative
-        # z_pos: ObsTerm = ObsTerm(func=mdp.base_pos_z)
-        
+    class AmpCfg(ObsGroup):        
         dof_pos: ObsTerm = ObsTerm(func=mdp.joint_pos)
         dof_vel: ObsTerm = ObsTerm(func=mdp.joint_vel)
         base_lin_vel_b: ObsTerm = ObsTerm(func=mdp.base_lin_vel)
