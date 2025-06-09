@@ -1,6 +1,15 @@
+from __future__ import annotations
+
+from dataclasses import MISSING
+
 from isaaclab.utils import configclass
 
-from isaaclab_rl.rsl_rl import RslRlPpoActorCriticCfg
+from isaaclab_rl.rsl_rl import RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg, RslRlOnPolicyRunnerCfg
+from .amp_cfg import RslRlAmpCfg
+
+#########################
+# Policy configurations #
+#########################
 
 @configclass
 class RslRlPpoActorCriticConv2dCfg(RslRlPpoActorCriticCfg):
@@ -19,3 +28,35 @@ class RslRlPpoActorCriticConv2dCfg(RslRlPpoActorCriticCfg):
     conv_linear_output_size: int = 16
     """Output size of the linear layer after the convolutional features are flattened."""
 
+############################
+# Algorithm configurations #
+############################
+
+
+@configclass
+class RslRlPpoAmpAlgorithmCfg(RslRlPpoAlgorithmCfg):
+    """Configuration for the AMP algorithm."""
+    
+    class_name: str = "PPOAmp"
+    """The algorithm class name. Default is PPOAmp."""
+
+    amp_cfg: RslRlAmpCfg = RslRlAmpCfg()
+    """Configuration for the AMP (Adversarial Motion Priors) in the training."""
+
+
+#########################
+# Runner configurations #
+#########################
+
+
+@configclass
+class RslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
+    """Configuration for the on-policy runner with AMP support."""
+
+    motion_file_path: str = MISSING
+    """Path to the motion file for AMP training."""
+    
+    motion_cfg_path: str = MISSING
+    """Path to the motion configuration file for AMP training."""
+
+    

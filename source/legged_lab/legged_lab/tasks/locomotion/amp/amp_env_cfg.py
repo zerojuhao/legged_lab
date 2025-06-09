@@ -23,7 +23,8 @@ import legged_lab.tasks.locomotion.amp.mdp as mdp
 
 from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import (
     ObservationsCfg,
-    LocomotionVelocityRoughEnvCfg
+    EventCfg,
+    LocomotionVelocityRoughEnvCfg,
 )
 
 
@@ -54,13 +55,40 @@ class AmpObservationsCfg(ObservationsCfg):
     
     amp: AmpCfg = AmpCfg()
     
+
+@configclass
+class AmpEventCfg(EventCfg):
+    """Configuration for amp events."""
     
+    reset_base_rsi = EventTerm(
+        func=mdp.ref_state_init_root, 
+        mode="reset",
+    )
+
+    reset_robot_joints_rsi = EventTerm(
+        func=mdp.ref_state_init_root,
+        mode="reset",
+    )
+
+    def __post_init__(self):
+        
+        self.reset_base = None
+        self.reset_robot_joints = None
+
+
 @configclass
 class LocomotionAmpEnvCfg(LocomotionVelocityRoughEnvCfg):
     """
     Environment configuration for the AMP locomotion task.
     """
     observations: AmpObservationsCfg = AmpObservationsCfg()
+    events: AmpEventCfg = AmpEventCfg()
+    
+    motion_file_path: str = MISSING
+    """Path to the motion file for AMP."""
+    
+    motion_cfg_path: str = MISSING
+    """Path to the motion configuration file for AMP."""
     
     def __post_init__(self):
         

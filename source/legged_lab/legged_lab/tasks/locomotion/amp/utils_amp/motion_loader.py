@@ -389,7 +389,7 @@ class MotionLoader:
         root_pos_w = root_pos_w_0 * (1.0 - blend)+ root_pos_w_1 * blend
         root_quat = torch.zeros_like(root_quat_0)
         for i in range(n):
-            # `quat_slerp` does not support batch operation
+            # `quat_slerp` does not support batch operation, TODO: make it support batch operation
             root_quat[i, :] = math_utils.quat_slerp(root_quat_0[i, :], root_quat_1[i, :], blend[i])
         root_vel_w = root_vel_w_0 * (1.0 - blend) + root_vel_w_1 * blend
         root_vel_b = math_utils.quat_rotate_inverse(root_quat, root_vel_w)
@@ -456,7 +456,7 @@ class MotionLoader:
                 raise ValueError(f"[MotionLoader] Observation term '{term}' is not supported, please check the observation terms in the config file.")
         
         for epoch in range(num_epochs):
-            indices = torch.randperm(batch_size, requires_grad=False, device=self.device)
+            indices = np.random.permutation(batch_size)  # use numpy for random permutation
             for i in range(num_mini_batches):
                 start = i * mini_batch_size
                 end = (i + 1) * mini_batch_size

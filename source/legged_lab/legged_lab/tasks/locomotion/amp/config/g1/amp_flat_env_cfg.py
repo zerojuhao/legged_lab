@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+import os
+
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
@@ -16,6 +18,8 @@ from legged_lab.tasks.locomotion.amp.amp_env_cfg import LocomotionAmpEnvCfg
 # Pre-defined configs
 ##
 from isaaclab_assets import G1_MINIMAL_CFG  # isort: skip
+
+from legged_lab import LEGGED_LAB_ROOT_DIR
 
 
 @configclass
@@ -156,19 +160,7 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # Events
         self.events.push_robot = None
         self.events.add_base_mass = None
-        self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
         self.events.base_external_force_torque.params["asset_cfg"].body_names = ["torso_link"]
-        self.events.reset_base.params = {
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
-            "velocity_range": {
-                "x": (0.0, 0.0),
-                "y": (0.0, 0.0),
-                "z": (0.0, 0.0),
-                "roll": (0.0, 0.0),
-                "pitch": (0.0, 0.0),
-                "yaw": (0.0, 0.0),
-            },
-        }
 
         # Rewards
         self.rewards.lin_vel_z_l2.weight = 0.0
@@ -191,6 +183,14 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
 
         # terminations
         self.terminations.base_contact.params["sensor_cfg"].body_names = "torso_link"
+        
+        # motion loader
+        self.motion_file_path = os.path.join(
+            LEGGED_LAB_ROOT_DIR, "data", "g1", "retargeted_motion.pkl"
+        )
+        self.motion_cfg_path = os.path.join(
+            LEGGED_LAB_ROOT_DIR, "data", "g1", "retargeted.yaml"
+        )
 
 
 @configclass

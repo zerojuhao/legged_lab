@@ -8,6 +8,8 @@ from isaaclab.managers import ActionManager, ObservationManager, RecorderManager
 
 from legged_lab.tasks.locomotion.amp.amp_env_cfg import LocomotionAmpEnvCfg
 
+from legged_lab.tasks.locomotion.amp.utils_amp import MotionLoader
+
 class AmpObservationManager(ObservationManager):
     def __init__(self, cfg: object, env: ManagerBasedEnv):
         super().__init__(cfg=cfg, env=env)
@@ -81,6 +83,14 @@ class AmpEnv(ManagerBasedRLEnv):
     
     def __init__(self, cfg: LocomotionAmpEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg=cfg, render_mode=render_mode, **kwargs)
+        
+        # load the motion loader
+        self.motion_loader: MotionLoader = MotionLoader(
+            motion_file=cfg.motion_file_path,
+            cfg_file=cfg.motion_cfg_path,
+            env=self,
+            device=self.device
+        )
 
     def load_managers(self):
         """Load the managers for the environment.

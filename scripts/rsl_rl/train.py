@@ -52,7 +52,7 @@ import os
 import torch
 from datetime import datetime
 
-from rsl_rl.runners import OnPolicyRunner, OnPolicyRunnerConv2d
+from rsl_rl.runners import OnPolicyRunner
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -144,7 +144,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # create runner from rsl-rl
     if agent_cfg.policy.class_name == "ActorCriticConv2d":
+        from rsl_rl.runners import OnPolicyRunnerConv2d
         runner = OnPolicyRunnerConv2d(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+    elif agent_cfg.algorithm.class_name == "PPOAmp":
+        from rsl_rl.runners import OnPolicyRunnerAMP
+        runner = OnPolicyRunnerAMP(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     else:
         runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     # write git state to logs
