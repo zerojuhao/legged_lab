@@ -25,6 +25,7 @@ import isaaclab.utils.math as math_utils
 import isaaclab.sim as sim_utils
 
 from legged_lab.tasks.locomotion.amp.config.g1.amp_flat_env_cfg import G1AmpFlatEnvCfg
+from legged_lab.tasks.locomotion.amp.amp_env import AmpEnv
 from legged_lab.tasks.locomotion.amp.utils_amp.motion_loader import MotionLoader
 from legged_lab import LEGGED_LAB_ROOT_DIR
 
@@ -36,25 +37,18 @@ def main():
     env_cfg.scene.num_envs = args_cli.num_envs
     env_cfg.sim.device = args_cli.device
     env_cfg.sim.dt = 0.01  # Set simulation time step
-    env = ManagerBasedRLEnv(cfg=env_cfg)
+    env = AmpEnv(cfg=env_cfg)   # motion loader is initialized inside AmpEnv
     robot:Articulation = env.scene["robot"]
     env_origins = env.scene.env_origins
 
-    # motion data
-    motion_file_path = os.path.join(
-        LEGGED_LAB_ROOT_DIR, "data", "g1", "retargeted_motion.pkl"
-    )
-    motion_cfg_path = os.path.join(
-        LEGGED_LAB_ROOT_DIR, "data", "g1", "retargeted.yaml"
-    )
-    
-    motion_loader = MotionLoader(
-        motion_file=motion_file_path,
-        cfg_file=motion_cfg_path,
-        env=env,
-        device=args_cli.device
-    )
-    
+    # # motion data
+    # motion_file_path = os.path.join(
+    #     LEGGED_LAB_ROOT_DIR, "data", "g1", "retargeted_motion.pkl"
+    # )
+    # motion_cfg_path = os.path.join(
+    #     LEGGED_LAB_ROOT_DIR, "data", "g1", "retargeted.yaml"
+    # )
+        
     # marker_cfg:VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/FrameVisualizerFromScript")
     marker_cfg = VisualizationMarkersCfg(
         prim_path="/Visuals/FrameVisualizerFromScript",
@@ -67,9 +61,9 @@ def main():
     )
     marker_vis = VisualizationMarkers(marker_cfg)
     
-    motion_ids = motion_loader.sample_motions(args_cli.num_envs)
+    motion_ids = env.motion_loader.sample_motions(args_cli.num_envs)
     print("Sampled motion IDs:", motion_ids)
-    motion_durations = motion_loader.get_motion_duration(motion_ids)
+    motion_durations = env.motion_loader.get_motion_duration(motion_ids)
 
     print(env.observation_manager.active_terms["amp"])
     
@@ -84,7 +78,7 @@ def main():
             
             motion_times = sim_time % motion_durations
             
-            motion_data = motion_loader.get_motion_state(motion_ids, motion_times)
+            motion_data = env.motion_loader.get_motion_state(motion_ids, motion_times)
             
             root_pos = motion_data["root_pos_w"]
             root_quat = motion_data["root_quat"]
