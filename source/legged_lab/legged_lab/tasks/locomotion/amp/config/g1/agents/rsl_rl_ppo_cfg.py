@@ -40,7 +40,7 @@ class G1FlatRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
         desired_kl=0.01,
         max_grad_norm=1.0,
         amp_cfg=RslRlAmpCfg(
-            replay_buffer_size=100000,
+            replay_buffer_size=1000,
             grad_penalty_scale=10.0,
             amp_trunk_weight_decay=1.0e-4,
             amp_linear_weight_decay=1.0e-2,
