@@ -47,7 +47,7 @@ class G1FlatRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
             amp_discriminator=RslRlAmpCfg.AMPDiscriminatorCfg(
                 hidden_dims=[256, 256, 256],
                 activation="elu",
-                amp_reward_scale=1.0,
+                amp_reward_scale=2.0,
                 task_reward_lerp=0.3
             )
         )

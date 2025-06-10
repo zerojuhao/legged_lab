@@ -11,6 +11,7 @@ import isaaclab.utils.string as string_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs import ManagerBasedEnv
 from isaaclab.sensors import FrameTransformer
+from legged_lab.tasks.locomotion.amp.utils_amp.quaternion import quat_slerp
 
 @torch.jit.script
 def vel_forward_diff(data: torch.Tensor, dt: float) -> torch.Tensor:
@@ -387,10 +388,7 @@ class MotionLoader:
         blend = blend.unsqueeze(-1)  # make it (n, 1) for broadcasting
         
         root_pos_w = root_pos_w_0 * (1.0 - blend)+ root_pos_w_1 * blend
-        root_quat = torch.zeros_like(root_quat_0)
-        for i in range(n):
-            # `quat_slerp` does not support batch operation, TODO: make it support batch operation
-            root_quat[i, :] = math_utils.quat_slerp(root_quat_0[i, :], root_quat_1[i, :], blend[i])
+        root_quat = quat_slerp(q0=root_quat_0, q1=root_quat_1, blend=blend.squeeze(-1))
         root_vel_w = root_vel_w_0 * (1.0 - blend) + root_vel_w_1 * blend
         root_vel_b = math_utils.quat_rotate_inverse(root_quat, root_vel_w)
         root_ang_vel_w = root_ang_vel_w_0 * (1.0 - blend) + root_ang_vel_w_1 * blend
