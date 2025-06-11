@@ -8,7 +8,7 @@ class RslRlAmpCfg:
     """Configuration class for the AMP (Adversarial Motion Priors) in the training
     """
     
-    replay_buffer_size: int = 100000
+    replay_buffer_size: int = 1000
     """Size of the replay buffer for storing AMP observations"""
     
     grad_penalty_scale: float = 10.0

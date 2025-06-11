@@ -40,15 +40,15 @@ class G1FlatRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
         desired_kl=0.01,
         max_grad_norm=1.0,
         amp_cfg=RslRlAmpCfg(
-            replay_buffer_size=100000,
+            replay_buffer_size=100,
             grad_penalty_scale=10.0,
             amp_trunk_weight_decay=1.0e-4,
             amp_linear_weight_decay=1.0e-2,
             amp_discriminator=RslRlAmpCfg.AMPDiscriminatorCfg(
-                hidden_dims=[256, 256, 256],
+                hidden_dims=[512, 256, 128],
                 activation="elu",
-                amp_reward_scale=1.0,
-                task_reward_lerp=0.3
+                amp_reward_scale=2.0,
+                task_reward_lerp=0.1
             )
         )
     )
