@@ -11,7 +11,6 @@ import isaaclab.utils.string as string_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs import ManagerBasedEnv
 from isaaclab.sensors import FrameTransformer
-from legged_lab.tasks.locomotion.amp.utils_amp.quaternion import quat_slerp
 
 @torch.jit.script
 def vel_forward_diff(data: torch.Tensor, dt: float) -> torch.Tensor:
@@ -62,16 +61,6 @@ def ang_vel_from_quat_diff(quat: torch.Tensor, dt: float, in_frame:str = "body")
     
     return ang_vel
 
-@torch.jit.script
-def linear_interpolate(x0: torch.Tensor, x1: torch.Tensor, blend: torch.Tensor) -> torch.Tensor:
-    """Linear interpolate between two tensors.
-
-    Args:
-        x0 (torch.Tensor): shape (N, M)
-        x1 (torch.Tensor): shape (N, M)
-        blend (torch.Tensor): shape(N, 1)
-    """
-    return x0 * (1 - blend) + x1 * blend
 
 class MotionLoader:
     """Handles loading and preparing retargeted motion data for a robot. 
@@ -105,8 +94,14 @@ class MotionLoader:
 
     def _build_joint_mapping(self):
         """Get the joint index mapping from lab joint names to retargeted joint names, and vice versa."""
-        robot:Articulation = self.env.scene["robot"]
-        self.lab_joint_names = robot.joint_names
+        
+        # TODO: ugly hard-coded, need to be fixed later
+        if "asset_cfg" in self.env.cfg.observations.amp.dof_pos.params:
+            self.lab_joint_names = self.env.cfg.observations.amp.dof_pos.params["asset_cfg"].joint_names
+        else:
+            robot:Articulation = self.env.scene["robot"]
+            self.lab_joint_names = robot.data.joint_names
+            
         if "joint_mapping" in self.cfg:
             # if joint names in retarget motion data are different from the lab joint names,
             # we need to load the joint mapping from the config file
@@ -153,13 +148,13 @@ class MotionLoader:
         if self.joint_offsets_dict is None:
             return
         assert isinstance(self.joint_offsets_dict, dict), f"[MotionLoader] Joint offsets should be a dictionary, but got {type(self.joint_offsets_dict)}."
-        for joint_name, offset in self.joint_offsets_dict.items():
-            if joint_name in self.lab_joint_names:
-                idx = self.lab_joint_names.index(joint_name)
-                self.joint_offsets[idx] = np.deg2rad(offset)
-            else:
-                raise ValueError(f"[MotionLoader] Joint name {joint_name} in joint_offsets not found in lab joint names: {self.lab_joint_names}")
         
+        for i, joint_name in enumerate(self.lab_joint_names):
+            if joint_name in self.joint_offsets_dict:
+                self.joint_offsets[i] = np.deg2rad(self.joint_offsets_dict[joint_name])
+            # else:
+            #     print(f"[MotionLoader] Joint {joint_name} not found in joint offsets dictionary, using 0.0 as offset.")
+
     def _load_motion_data(self):
         """Load the motion data from the motion file and process it."""
         # load pkl file, it is a dictionary with keys:
@@ -187,8 +182,8 @@ class MotionLoader:
         print(f"[MotionLoader] Load motions: {self.motion_names}")
         
         # get motion weights and normalize them
-        self.motion_weights = torch.tensor(list(self.motion_weights_dict.values()), dtype=torch.float32, device=self.device)
-        self.motion_weights /= torch.sum(self.motion_weights)
+        self.motion_weights = np.array(list(self.motion_weights_dict.values()), dtype=np.float32)
+        self.motion_weights /= np.sum(self.motion_weights)
         
         self.motion_data = []   # list to store processed motion data (a dictionary), each element corresponds to a motion
         self.motion_duration = []
@@ -213,15 +208,15 @@ class MotionLoader:
             self.motion_fps.append(motion_fps)
             self.motion_dt.append(dt)
             self.motion_num_frames.append(num_frames)
-                
-        self.motion_fps = torch.tensor(self.motion_fps, dtype=torch.float32, device=self.device)
-        self.motion_dt = torch.tensor(self.motion_dt, dtype=torch.float32, device=self.device)
-        self.motion_duration = torch.tensor(self.motion_duration, dtype=torch.float32, device=self.device)
-        self.motion_num_frames = torch.tensor(self.motion_num_frames, dtype=torch.int32, device=self.device)
+        
+        self.motion_fps = np.array(self.motion_fps, dtype=np.float32)
+        self.motion_dt = np.array(self.motion_dt, dtype=np.float32)
+        self.motion_duration = np.array(self.motion_duration, dtype=np.float32)
+        self.motion_num_frames = np.array(self.motion_num_frames, dtype=np.int32)
         
         print(f"[MotionLoader] Loaded {len(self.motion_names)} motions with total duration: {self.get_total_duration()} seconds.")
             
-    def _process_motion_data(self, motion_raw_data) -> dict[str, torch.Tensor]:
+    def _process_motion_data(self, motion_raw_data):
         """Process the raw motion data into a format suitable for training.
         
         Args:
@@ -239,12 +234,10 @@ class MotionLoader:
             raise ValueError(f"[MotionLoader] Motion has only {num_frames} frames, cannot compute velocity.")
         
         # root position in world frame, shape (num_frames, 3)
-        root_pos_w = torch.from_numpy(motion_raw_data["root_pos"]).to(self.device).float()
-        root_pos_w.requires_grad_(False)
-        
+        root_pos_w = torch.tensor(motion_raw_data["root_pos"], dtype=torch.float32, device=self.device, requires_grad=False)
+
         # root rotation (quaternion) from world frame to body frame, shape (num_frames, 4)
-        root_quat = torch.from_numpy(motion_raw_data["root_rot"]).to(self.device).float()
-        root_quat.requires_grad_(False)
+        root_quat = torch.tensor(motion_raw_data["root_rot"], dtype=torch.float32, device=self.device, requires_grad=False)
         root_quat = math_utils.convert_quat(root_quat, "wxyz") # convert to w, x, y, z format
         root_quat = math_utils.quat_unique(root_quat)  # ensure unique quaternions
         root_quat = math_utils.normalize(root_quat)  # ensure quaternion is normalized
@@ -265,8 +258,7 @@ class MotionLoader:
         dof_pos = motion_raw_data["dof_pos"][:, self.retargeted_to_lab_mapping]
         # apply joint offsets
         dof_pos += self.joint_offsets
-        dof_pos = torch.from_numpy(dof_pos).to(self.device).float()
-        dof_pos.requires_grad_(False)
+        dof_pos = torch.tensor(dof_pos, dtype=torch.float32, device=self.device, requires_grad=False)
         
         # joint velocity, shape (num_frames, num_joints)
         dof_vel = vel_forward_diff(dof_pos, dt)
@@ -289,7 +281,7 @@ class MotionLoader:
         
     def get_total_duration(self) -> float:
         """Get the total duration of all motions."""
-        return torch.sum(self.motion_duration).item()
+        return np.sum(self.motion_duration)
 
     def get_num_motions(self) -> int:
         """Get the number of motions."""
@@ -308,7 +300,7 @@ class MotionLoader:
             raise IndexError(f"[MotionLoader] Motion ID {motion_id} out of range, must be between 0 and {len(self.motion_data) - 1}.")
         return self.motion_data[motion_id]
 
-    def get_motion_duration(self, motion_ids: torch.Tensor) -> torch.Tensor:
+    def get_motion_duration(self, motion_ids: np.ndarray) -> np.ndarray:
         """Get the duration of a specific motion.
 
         Args:
@@ -319,34 +311,35 @@ class MotionLoader:
         """
         return self.motion_duration[motion_ids]
 
-    def sample_motions(self, n: int) -> torch.Tensor:
+    def sample_motions(self, n: int) -> np.ndarray:
         """Sample a batch of motion IDs.
 
         Args:
             n (int): The number of motion IDs to sample.
 
         Returns:
-            torch.Tensor: A tensor of sampled motion IDs, shape (n,).
+            np.ndarray: An array of sampled motion IDs.
         """
-        motion_ids = torch.multinomial(self.motion_weights, num_samples=n, replacement=True)
+        m = self.get_num_motions()
+        motion_ids = np.random.choice(m, size=n, replace=True, p=self.motion_weights)
         return motion_ids
     
-    def sample_times(self, motion_ids:torch.Tensor, truncate_time=None):
+    def sample_times(self, motion_ids, truncate_time=None):
 
-        phase = torch.rand(motion_ids.shape, device=self.device)
-        motion_durations = self.motion_duration[motion_ids]
+        phase = np.random.uniform(low=0.0, high=1.0, size=motion_ids.shape)
         
+        motion_durations = self.motion_duration[motion_ids]
         if truncate_time is not None:
             assert truncate_time > 0, f"[MotionLoader] Truncate time must be positive, but got {truncate_time}."
-            motion_durations = torch.clamp(motion_durations - truncate_time, min=0.0)
+            motion_durations = np.maximum(motion_durations - truncate_time, np.zeros_like(motion_durations))
 
         # Sample time for each motion
         sample_times = phase * motion_durations
         return sample_times
-
-    def get_motion_state(self, motion_ids: torch.Tensor, motion_times: torch.Tensor) -> dict[str, torch.Tensor]:
-
-        n = motion_ids.shape[0]
+    
+    def get_motion_state(self, motion_ids, motion_times):
+        
+        n = len(motion_ids)
         
         root_pos_w_0 = torch.empty([n, 3], dtype=torch.float32, device=self.device)
         root_pos_w_1 = torch.empty([n, 3], dtype=torch.float32, device=self.device)
@@ -369,12 +362,11 @@ class MotionLoader:
         
         frame_idx0, frame_idx1, blend = self._calc_frame_blend(motion_times, motion_durations, num_frames, dt)
         
-        unique_ids, inverse_indices = torch.unique(motion_ids, return_inverse=True)
-            
-        for i, uid in enumerate(unique_ids):
-            mask = inverse_indices == i
-            ids = torch.where(mask)[0]
-            motion = self.get_motion(uid.item())
+        unique_ids = np.unique(motion_ids)
+        for uid in unique_ids:
+            ids = np.where(motion_ids == uid)
+            ids = torch.from_numpy(ids[0]).to(self.device).long()
+            motion = self.get_motion(uid)
             
             root_pos_w_0[ids, :] = motion["root_pos_w"][frame_idx0[ids], :]
             root_pos_w_1[ids, :] = motion["root_pos_w"][frame_idx1[ids], :]
@@ -398,18 +390,20 @@ class MotionLoader:
             key_links_pos_w_1[ids, :, :] = motion["key_links_pos_w"][frame_idx1[ids], :, :]
             
         # interpolate the values
-        
-        root_quat = quat_slerp(q0=root_quat_0, q1=root_quat_1, blend=blend)
-        
         blend = blend.unsqueeze(-1)  # make it (n, 1) for broadcasting
-        root_pos_w = linear_interpolate(root_pos_w_0, root_pos_w_1, blend)
-        root_vel_w = linear_interpolate(root_vel_w_0, root_vel_w_1, blend)
+        
+        root_pos_w = root_pos_w_0 * (1.0 - blend)+ root_pos_w_1 * blend
+        root_quat = torch.zeros_like(root_quat_0)
+        for i in range(n):
+            # `quat_slerp` does not support batch operation, TODO: make it support batch operation
+            root_quat[i, :] = math_utils.quat_slerp(root_quat_0[i, :], root_quat_1[i, :], blend[i])
+        root_vel_w = root_vel_w_0 * (1.0 - blend) + root_vel_w_1 * blend
         root_vel_b = math_utils.quat_rotate_inverse(root_quat, root_vel_w)
-        root_ang_vel_w = linear_interpolate(root_ang_vel_w_0, root_ang_vel_w_1, blend)
+        root_ang_vel_w = root_ang_vel_w_0 * (1.0 - blend) + root_ang_vel_w_1 * blend
         root_ang_vel_b = math_utils.quat_rotate_inverse(root_quat, root_ang_vel_w)
-        dof_pos = linear_interpolate(dof_pos_0, dof_pos_1, blend)
-        dof_vel = linear_interpolate(dof_vel_0, dof_vel_1, blend)
-        key_links_pos_w = linear_interpolate(key_links_pos_w_0, key_links_pos_w_1, blend.unsqueeze(1))
+        dof_pos = dof_pos_0 * (1.0 - blend) + dof_pos_1 * blend
+        dof_vel = dof_vel_0 * (1.0 - blend) + dof_vel_1 * blend
+        key_links_pos_w = key_links_pos_w_0 * (1.0 - blend.unsqueeze(1)) + key_links_pos_w_1 * blend.unsqueeze(1)
         key_links_pos_b = math_utils.quat_rotate_inverse(root_quat.unsqueeze(1), key_links_pos_w - root_pos_w.unsqueeze(1))
         
         return {
@@ -424,15 +418,22 @@ class MotionLoader:
             "key_links_pos_b": key_links_pos_b
         }
 
-    def _calc_frame_blend(self, time:torch.Tensor, duration:torch.Tensor, num_frames:torch.Tensor, dt:torch.Tensor):
-
+    def _calc_frame_blend(self, time, duration, num_frames, dt):
+        
+        assert len(time) == len(duration) == len(num_frames) == len(dt), \
+            f"[MotionLoader] Length mismatch: time {len(time)}, duration {len(duration)}, num_frames {len(num_frames)}, dt {len(dt)}"
+        
         phase = time / duration
-        phase = torch.clamp(phase, min=0.0, max=1.0)
+        phase = np.clip(phase, 0.0, 1.0)
         
-        frame_idx0 = (phase * (num_frames - 1).float()).long()
-        frame_idx1 = torch.minimum(frame_idx0 + 1, num_frames - 1)
-        blend = (time - frame_idx0.float() * dt) / dt
-        
+        frame_idx0 = (phase * (num_frames - 1)).astype(int)
+        frame_idx1 = np.minimum(frame_idx0 + 1, num_frames - 1)
+        blend = (time - frame_idx0 * dt) / dt
+
+        frame_idx0 = torch.from_numpy(frame_idx0).to(self.device).long()
+        frame_idx1 = torch.from_numpy(frame_idx1).to(self.device).long()
+        blend = torch.from_numpy(blend).to(self.device).float()
+
         return frame_idx0, frame_idx1, blend
     
     def mini_batch_generator(self, num_transitions_per_env, num_mini_batches, num_epochs=8):

@@ -167,7 +167,7 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         self.rewards.track_lin_vel_xy_exp.weight = 1.0
         self.rewards.track_ang_vel_z_exp.weight = 0.5
         
-        self.rewards.termination_penalty.weight = 0.0
+        self.rewards.termination_penalty.weight = -100.0
         
         self.rewards.undesired_contacts = None # TODO
         
