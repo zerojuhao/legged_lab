@@ -23,7 +23,7 @@ from isaaclab.assets import Articulation
 from isaaclab.sensors import FrameTransformer, FrameTransformerCfg, OffsetCfg
 
 from legged_lab.tasks.locomotion.amp.config.g1.amp_flat_env_cfg import G1AmpFlatEnvCfg
-
+from legged_lab.tasks.locomotion.amp.amp_env import AmpEnv
 
 def main():
     env_cfg = G1AmpFlatEnvCfg()
@@ -33,7 +33,7 @@ def main():
     env_cfg.scene.frame_transformer.debug_vis = True
     env_cfg.scene.frame_transformer.visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
     
-    env = ManagerBasedRLEnv(cfg=env_cfg)
+    env = AmpEnv(cfg=env_cfg)
     
     draw_interface = omni_debug_draw.acquire_debug_draw_interface()
     frame_transformer: FrameTransformer = env.scene["frame_transformer"]

@@ -39,6 +39,18 @@ def main():
     
     count = 0
     obs, _ = env.reset()
+
+    amp_obs_dict = obs["amp"]
+    # print the shape of values in amp_obs_dict
+    for key, value in amp_obs_dict.items():
+        print(f"{key}: {value.shape}")
+        
+    # dof_pos: torch.Size([4, 2, 37])
+    # dof_vel: torch.Size([4, 2, 37])
+    # base_lin_vel_b: torch.Size([4, 2, 3])
+    # base_ang_vel_b: torch.Size([4, 2, 3])
+    # base_pos_z: torch.Size([4, 2, 1])
+    # key_links_pos_b: torch.Size([4, 2, 48])
     
     while simulation_app.is_running():
         with torch.inference_mode():
@@ -51,8 +63,11 @@ def main():
             amp_obs_dict = obs["amp"]
             amp_obs = torch.cat(list(amp_obs_dict.values()), dim=-1).reshape(args_cli.num_envs, -1)
             
-            key_links_pos_b_his = amp_obs_dict["key_links_pos_b"].reshape(args_cli.num_envs, 2, -1, 3)  # shape: (N, 2, M, 3), 2 is history length, M is number of key links
-            key_links_pos_b = key_links_pos_b_his[:, 1, :, :]   # shape: (N, M, 3), only use the latest key links positions
+            # key_links_pos_b_his = amp_obs_dict["key_links_pos_b"].reshape(args_cli.num_envs, 2, -1, 3)  # shape: (N, 2, M, 3), 2 is history length, M is number of key links
+            # key_links_pos_b = key_links_pos_b_his[:, 1, :, :]   # shape: (N, M, 3), only use the latest key links positions
+            
+            key_links_pos_b = amp_obs[:, 37+37+3+3+1:37+37+3+3+1+48].reshape(args_cli.num_envs, -1, 3)  # shape: (N, M, 3), N is number of envs, M is number of key links
+            
             root_pos_w = robot.data.root_pos_w.unsqueeze(1) # shape: (N, 1, 3)
             root_quat_w = robot.data.root_quat_w.unsqueeze(1)  # shape: (N, 1, 4)
             key_links_pos_w = root_pos_w + math_utils.quat_rotate(root_quat_w, key_links_pos_b)
@@ -71,7 +86,7 @@ def main():
             if count % 50 == 0:
                 print("-" * 80)
                 print("amp observations shape", amp_obs.shape)
-                print("key links pos history shape", key_links_pos_b_his.shape)
+                # print("key links pos history shape", key_links_pos_b_his.shape)
                 print("key links pos shape", key_links_pos_b.shape)
             
             count += 1
