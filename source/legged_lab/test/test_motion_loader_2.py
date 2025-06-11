@@ -33,6 +33,7 @@ from legged_lab.tasks.locomotion.amp.utils_amp.motion_loader import MotionLoader
 from legged_lab import LEGGED_LAB_ROOT_DIR
 
 import os
+import time
 
 def main():
     
@@ -51,8 +52,14 @@ def main():
     )
     
     count = 0
+    start_time =time.time()
     for mini_batch in motion_loader_generator:
-        print(f"Mini-batch {count}:")
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f"Minibatch {count} loading time: {duration}")
+        
+        start_time = time.time()
         
         count += 1
             
