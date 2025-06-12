@@ -27,37 +27,37 @@ class G1AmpSceneCfg(MySceneCfg):
     frame_transformer = FrameTransformerCfg(
         prim_path="{ENV_REGEX_NS}/Robot/torso_link",
         target_frames=[
-            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/pelvis"),
-            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_hip_pitch_link"),
-            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_knee_link"),
+            # FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/pelvis"),
+            # FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_hip_pitch_link"),
+            # FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_knee_link"),
             FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_ankle_roll_link"),
-            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_shoulder_roll_link"),
-            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_elbow_pitch_link"),
+            # FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_shoulder_roll_link"),
+            # FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_elbow_pitch_link"),
             FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_zero_link"),
-            FrameTransformerCfg.FrameCfg(
-                prim_path="{ENV_REGEX_NS}/Robot/pelvis", 
-                name="head_link", 
-                offset=OffsetCfg(
-                    pos=(0.0, 0.0, 0.4), 
-                    rot=(1.0, 0.0, 0.0, 0.0)
-                )
-            ),
-            FrameTransformerCfg.FrameCfg(
-                prim_path="{ENV_REGEX_NS}/Robot/left_ankle_roll_link",
-                name="left_toe_link",
-                offset=OffsetCfg(
-                    pos=(0.08, 0.0, 0.0), 
-                    rot=(1.0, 0.0, 0.0, 0.0)
-                )
-            ),
-            FrameTransformerCfg.FrameCfg(
-                prim_path="{ENV_REGEX_NS}/Robot/right_ankle_roll_link",
-                name="right_toe_link",
-                offset=OffsetCfg(
-                    pos=(0.08, 0.0, 0.0),
-                    rot=(1.0, 0.0, 0.0, 0.0)
-                )
-            ),
+            # FrameTransformerCfg.FrameCfg(
+            #     prim_path="{ENV_REGEX_NS}/Robot/pelvis", 
+            #     name="head_link", 
+            #     offset=OffsetCfg(
+            #         pos=(0.0, 0.0, 0.4), 
+            #         rot=(1.0, 0.0, 0.0, 0.0)
+            #     )
+            # ),
+            # FrameTransformerCfg.FrameCfg(
+            #     prim_path="{ENV_REGEX_NS}/Robot/left_ankle_roll_link",
+            #     name="left_toe_link",
+            #     offset=OffsetCfg(
+            #         pos=(0.08, 0.0, 0.0), 
+            #         rot=(1.0, 0.0, 0.0, 0.0)
+            #     )
+            # ),
+            # FrameTransformerCfg.FrameCfg(
+            #     prim_path="{ENV_REGEX_NS}/Robot/right_ankle_roll_link",
+            #     name="right_toe_link",
+            #     offset=OffsetCfg(
+            #         pos=(0.08, 0.0, 0.0),
+            #         rot=(1.0, 0.0, 0.0, 0.0)
+            #     )
+            # ),
         ], 
         debug_vis=False
     )
@@ -164,10 +164,10 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
 
         # Rewards
         # For AMP, we only needs a few rewards
-        self.rewards.track_lin_vel_xy_exp.weight = 1.0
-        self.rewards.track_ang_vel_z_exp.weight = 0.5
+        self.rewards.track_lin_vel_xy_exp.weight = 10.0
+        self.rewards.track_ang_vel_z_exp.weight = 3.0
         
-        self.rewards.termination_penalty.weight = -100.0
+        self.rewards.termination_penalty.weight = 0.0
         
         self.rewards.undesired_contacts = None # TODO
         
@@ -201,7 +201,7 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         
         # Commands
         self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 1.0)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.3, 0.3)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
         self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
 
         # terminations

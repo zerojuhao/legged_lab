@@ -30,7 +30,7 @@ class G1FlatRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
-        entropy_coef=0.008,
+        entropy_coef=0.01,
         num_learning_epochs=5,
         num_mini_batches=4,
         learning_rate=1.0e-3,
@@ -40,15 +40,15 @@ class G1FlatRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
         desired_kl=0.01,
         max_grad_norm=1.0,
         amp_cfg=RslRlAmpCfg(
-            replay_buffer_size=100,
+            replay_buffer_size=1000,
             grad_penalty_scale=10.0,
             amp_trunk_weight_decay=1.0e-4,
             amp_linear_weight_decay=1.0e-2,
             amp_discriminator=RslRlAmpCfg.AMPDiscriminatorCfg(
-                hidden_dims=[512, 256, 128],
+                hidden_dims=[1024, 512],
                 activation="elu",
                 amp_reward_scale=2.0,
-                task_reward_lerp=0.1
+                task_reward_lerp=0.3
             )
         )
     )
