@@ -13,6 +13,7 @@ from pxr import Gf, Sdf, UsdGeom, Vt
 
 import isaaclab.sim as sim_utils
 import isaaclab.utils.math as math_utils
+import isaaclab.utils.string as string_utils
 from isaaclab.actuators import ImplicitActuator
 from isaaclab.assets import Articulation, DeformableObject, RigidObject
 from isaaclab.managers import EventTermCfg, ManagerTermBase, SceneEntityCfg
@@ -87,15 +88,33 @@ def ref_state_init_dof(
     motion_times = env.motion_loader.sample_times(motion_ids, truncate_time=dt)
     motion_state_dict = env.motion_loader.get_motion_state(motion_ids, motion_times)
     
-    joint_pos = motion_state_dict["dof_pos"]
-    joint_vel = motion_state_dict["dof_vel"]
+    # Consider not using all the joints
     
-    # clamp joint pos to limits
-    joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids]
-    joint_pos = joint_pos.clamp_(joint_pos_limits[..., 0], joint_pos_limits[..., 1])
-    # clamp joint vel to limits
-    joint_vel_limits = asset.data.soft_joint_vel_limits[env_ids]
-    joint_vel = joint_vel.clamp_(-joint_vel_limits, joint_vel_limits)
+    # get default joint state
+    joint_pos = asset.data.default_joint_pos[env_ids].clone()
+    joint_vel = asset.data.default_joint_vel[env_ids].clone()
+    
+    used_joint_names = env.motion_loader.lab_joint_names
+    joint_names = asset.data.joint_names
+    
+    setting_indice, _ = string_utils.resolve_matching_names(
+        keys=used_joint_names,
+        list_of_strings=joint_names,
+        preserve_order=True
+    )
+    
+    load_joint_pos = motion_state_dict["dof_pos"]
+    load_joint_vel = motion_state_dict["dof_vel"]
+    
+    joint_pos[:, setting_indice] = load_joint_pos
+    joint_vel[:, setting_indice] = load_joint_vel
+    
+    # # clamp joint pos to limits
+    # joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids]
+    # joint_pos = joint_pos.clamp_(joint_pos_limits[..., 0], joint_pos_limits[..., 1])
+    # # clamp joint vel to limits
+    # joint_vel_limits = asset.data.soft_joint_vel_limits[env_ids]
+    # joint_vel = joint_vel.clamp_(-joint_vel_limits, joint_vel_limits)
 
     # set into the physics simulation
     asset.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
