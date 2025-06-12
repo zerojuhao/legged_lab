@@ -66,7 +66,7 @@ class AmpEventCfg(EventCfg):
     )
 
     reset_robot_joints_rsi = EventTerm(
-        func=mdp.ref_state_init_root,
+        func=mdp.ref_state_init_dof,
         mode="reset",
     )
 
