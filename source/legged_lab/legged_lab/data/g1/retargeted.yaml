@@ -54,7 +54,7 @@ lab_joint_names: [
 motion_weights: 
   "Walk_B10___Walk_turn_left_45_poses": 1.0
   "Walk_B13___Walk_turn_right_45_poses": 1.0
-  "Walk_B15___Walk_turn_around_poses": 1.0
+  "Walk_B15___Walk_turn_around_poses": 0.0
 
 
 

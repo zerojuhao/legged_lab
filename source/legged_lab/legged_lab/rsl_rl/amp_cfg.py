@@ -15,10 +15,16 @@ class RslRlAmpCfg:
     """Scale for the gradient penalty in AMP training"""
     
     amp_trunk_weight_decay: float = 1.0e-4
-    """Weight decay for the AMP trunk network"""
+    """Weight decay for the discriminator trunk network"""
     
     amp_linear_weight_decay: float = 1.0e-2
-    """Weight decay for the AMP linear network"""
+    """Weight decay for the discriminator linear network"""
+    
+    amp_learning_rate: float = 1.0e-5
+    """Learning rate for the discriminator networks"""
+    
+    amp_max_grad_norm: float = 1.0
+    """Maximum gradient norm for the discriminator networks"""
 
     @configclass
     class AMPDiscriminatorCfg:

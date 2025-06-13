@@ -164,8 +164,8 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
 
         # Rewards
         # For AMP, we only needs a few rewards
-        self.rewards.track_lin_vel_xy_exp.weight = 10.0
-        self.rewards.track_ang_vel_z_exp.weight = 3.0
+        self.rewards.track_lin_vel_xy_exp.weight = 24.0
+        self.rewards.track_ang_vel_z_exp.weight = 8.0
         
         self.rewards.termination_penalty.weight = 0.0
         
@@ -200,8 +200,8 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         self.rewards.joint_deviation_torso = None
         
         # Commands
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 1.0)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
+        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.0)
+        self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
         self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
 
         # terminations

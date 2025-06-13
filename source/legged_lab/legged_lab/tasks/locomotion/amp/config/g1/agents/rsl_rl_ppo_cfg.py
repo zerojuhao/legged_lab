@@ -44,6 +44,8 @@ class G1FlatRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
             grad_penalty_scale=10.0,
             amp_trunk_weight_decay=1.0e-4,
             amp_linear_weight_decay=1.0e-2,
+            amp_learning_rate=1.0e-5,
+            amp_max_grad_norm = 1.0,
             amp_discriminator=RslRlAmpCfg.AMPDiscriminatorCfg(
                 hidden_dims=[1024, 512],
                 activation="elu",
