@@ -13,7 +13,7 @@ from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import LocomotionVelo
 ##
 # Pre-defined configs
 ##
-from isaaclab_assets import G1_MINIMAL_CFG  # isort: skip
+from legged_lab.assets.unitree import G1_29DOF_LOCK_WAIST_MINIMAL_CFG
 
 
 @configclass
@@ -69,34 +69,18 @@ class G1Rewards(RewardsCfg):
                     ".*_shoulder_pitch_joint",
                     ".*_shoulder_roll_joint",
                     ".*_shoulder_yaw_joint",
-                    ".*_elbow_pitch_joint",
-                    ".*_elbow_roll_joint",
+                    ".*_elbow_joint",
+                    ".*_wrist_roll_joint",
+                    ".*_wrist_pitch_joint",
+                    ".*_wrist_yaw_joint",
                 ],
             )
         },
     )
-    joint_deviation_fingers = RewTerm(
-        func=mdp.joint_deviation_l1,
-        weight=-0.05,
-        params={
-            "asset_cfg": SceneEntityCfg(
-                "robot",
-                joint_names=[
-                    ".*_five_joint",
-                    ".*_three_joint",
-                    ".*_six_joint",
-                    ".*_four_joint",
-                    ".*_zero_joint",
-                    ".*_one_joint",
-                    ".*_two_joint",
-                ],
-            )
-        },
-    )
-    joint_deviation_torso = RewTerm(
+    joint_deviation_waist = RewTerm(
         func=mdp.joint_deviation_l1,
         weight=-0.1,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names="torso_joint")},
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names="waist_yaw_joint")},
     )
 
 
@@ -108,14 +92,14 @@ class G1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # post init of parent
         super().__post_init__()
         # Scene
-        self.scene.robot = G1_MINIMAL_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/torso_link"
+        self.scene.robot = G1_29DOF_LOCK_WAIST_MINIMAL_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/waist_yaw_link"
 
         # Randomization
         self.events.push_robot = None
         self.events.add_base_mass = None
         self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
-        self.events.base_external_force_torque.params["asset_cfg"].body_names = ["torso_link"]
+        self.events.base_external_force_torque.params["asset_cfg"].body_names = ["waist_yaw_link"]
         self.events.reset_base.params = {
             "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
             "velocity_range": {
@@ -148,7 +132,7 @@ class G1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
 
         # terminations
-        self.terminations.base_contact.params["sensor_cfg"].body_names = "torso_link"
+        self.terminations.base_contact.params["sensor_cfg"].body_names = "waist_yaw_link"
 
 
 @configclass
