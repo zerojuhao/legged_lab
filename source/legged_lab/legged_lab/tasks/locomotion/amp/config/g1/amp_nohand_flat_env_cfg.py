@@ -83,5 +83,19 @@ class G1AmpNoHandFlatEnvCfg(G1AmpFlatEnvCfg):
         super().__post_init__()
         
         
-
-
+@configclass
+class G1AmpNoHandFlatEnvCfg_PLAY(G1AmpNoHandFlatEnvCfg):
+    def __post_init__(self):
+        # post init of parent
+        super().__post_init__()
+        
+        # make a smaller scene for play
+        self.scene.num_envs = 4
+        self.episode_length_s = 40.0
+        
+        # disable randomization for play
+        self.observations.policy.enable_corruption = False
+        
+        # remove random pushing
+        self.events.base_external_force_torque = None
+        self.events.push_robot = None
