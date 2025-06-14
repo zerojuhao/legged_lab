@@ -116,13 +116,15 @@ def main():
     if agent_cfg.policy.class_name == "ActorCriticConv2d":
         from rsl_rl.runners import OnPolicyRunnerConv2d
         ppo_runner = OnPolicyRunnerConv2d(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+        ppo_runner.load(resume_path)    # TODO
     elif agent_cfg.algorithm.class_name == "PPOAmp":
         from rsl_rl.runners import OnPolicyRunnerAMP
         ppo_runner = OnPolicyRunnerAMP(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+        ppo_runner.load(resume_path, map_location=agent_cfg.device)
     else:
         ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    ppo_runner.load(resume_path, map_location=agent_cfg.device)
-
+        ppo_runner.load(resume_path)
+    
     # obtain the trained policy for inference
     policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
 

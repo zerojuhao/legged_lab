@@ -20,10 +20,10 @@ class G1FlatRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
         activation="elu",
     )
     motion_file_path = os.path.join(
-        LEGGED_LAB_ROOT_DIR, "data", "g1", "retargeted_motion.pkl"
+        LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof_lock_waist", "retargeted_motion.pkl"
     )
     motion_cfg_path = os.path.join(
-        LEGGED_LAB_ROOT_DIR, "data", "g1", "retargeted.yaml"
+        LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof_lock_waist", "retargeted.yaml"
     )
     algorithm = RslRlPpoAmpAlgorithmCfg(
         class_name="PPOAmp",
