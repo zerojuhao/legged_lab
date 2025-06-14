@@ -39,9 +39,13 @@ class AmpObservationsCfg(ObservationsCfg):
         # base_ang_vel_b: ObsTerm = ObsTerm(func=mdp.base_ang_vel)
         # base_pos_z: ObsTerm = ObsTerm(func=mdp.base_pos_z)  # TODO: consider terrain height
         key_links_pos_b: ObsTerm = ObsTerm(
-            func=mdp.key_links_pos, 
+            func=mdp.key_links_pos_b, 
             params={
-                "asset_cfg": SceneEntityCfg("frame_transformer")
+                "asset_cfg": SceneEntityCfg(
+                    "robot", 
+                    body_names=MISSING
+                ), 
+                "local_pos_dict": MISSING,
             }
         )
     

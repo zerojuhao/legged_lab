@@ -103,16 +103,14 @@ class MotionLoader:
         
         self._load_motion_data()
         self.motion_ids = torch.arange(len(self.motion_names), dtype=torch.long, device=self.device)
+        
+        self._print_motion_info()
 
     def _build_joint_mapping(self):
         """Get the joint index mapping from lab joint names to retargeted joint names, and vice versa."""
         
-        # TODO: ugly hard-coded, need to be fixed later
-        if "asset_cfg" in self.env.cfg.observations.amp.dof_pos.params:
-            self.lab_joint_names = self.env.cfg.observations.amp.dof_pos.params["asset_cfg"].joint_names
-        else:
-            robot:Articulation = self.env.scene["robot"]
-            self.lab_joint_names = robot.data.joint_names
+        robot:Articulation = self.env.scene["robot"]
+        self.lab_joint_names = robot.data.joint_names
             
         if "joint_mapping" in self.cfg:
             # if joint names in retarget motion data are different from the lab joint names,
@@ -133,16 +131,31 @@ class MotionLoader:
                 raise ValueError(f"[MotionLoader] Joint names in retargeted motion data {self.retargeted_joint_names} do not match the lab joint names {self.lab_joint_names}.")
 
     def _build_key_links_mapping(self):
-        frame_transformer: FrameTransformer = self.env.scene.sensors["frame_transformer"]
-        self.lab_key_links_names = frame_transformer.data.target_frame_names
-        
+        """
+        Build the mapping from lab key links names to retargeted key links names.
+        """
         if "key_links_mapping" in self.cfg:
             # if key links names in retarget motion data are different from the lab key links names,
             # we need to load the key links mapping from the config file
-            raise NotImplementedError("Key links mapping from config file is not implemented yet.")
+            key_links_mapping = self.cfg["key_links_mapping"]
+            name_lab_idx_retargeted = {}
+            for retargeted_name, lab_name in key_links_mapping.items():
+                if retargeted_name not in self.retargeted_link_names:
+                    raise ValueError(f"[MotionLoader] Retargeted link name {retargeted_name} not found in retargeted motion data {self.retargeted_link_names}.")
+                name_lab_idx_retargeted[lab_name] = self.retargeted_link_names.index(retargeted_name)
+            robot:Articulation = self.env.scene["robot"]
+            self.lab_body_names = robot.data.body_names
+            indices, names, values = string_utils.resolve_matching_names_values(
+                data=name_lab_idx_retargeted, 
+                list_of_strings=self.lab_body_names, 
+                preserve_order=False
+            )
+            self.retargeted_key_links_mapping = values
         else:
-            # else, we assume the key links names in the retargeted motion data are the same as the lab key links names, 
+            # else, we assume the key links names in the retargeted motion data are the same as the lab key links names,
             # and we only need to rearrange them to match the order in the lab key links names
+            frame_transformer: FrameTransformer = self.env.scene.sensors["frame_transformer"]
+            self.lab_key_links_names = frame_transformer.data.target_frame_names
             try:
                 self.retargeted_key_links_mapping, _ = string_utils.resolve_matching_names(
                     keys=self.lab_key_links_names, 
@@ -225,8 +238,6 @@ class MotionLoader:
         self.motion_dt = torch.tensor(self.motion_dt, dtype=torch.float32, device=self.device)
         self.motion_duration = torch.tensor(self.motion_duration, dtype=torch.float32, device=self.device)
         self.motion_num_frames = torch.tensor(self.motion_num_frames, dtype=torch.int32, device=self.device)
-        
-        print(f"[MotionLoader] Loaded {len(self.motion_names)} motions with total duration: {self.get_total_duration()} seconds.")
             
     def _process_motion_data(self, motion_raw_data) -> dict[str, torch.Tensor]:
         """Process the raw motion data into a format suitable for training.
@@ -292,6 +303,28 @@ class MotionLoader:
             "dof_vel": dof_vel,
             "key_links_pos_w": key_links_pos_w,
         }
+    
+    def _print_motion_info(self):
+        """Print the information of the loaded motions."""
+        print("="* 80)
+        print(f"[MotionLoader] Loaded {len(self.motion_names)} motions with total duration: {self.get_total_duration()} seconds.")
+        print("-"* 80)
+        for i, motion_name in enumerate(self.motion_names):
+            duration = self.motion_duration[i]
+            fps = self.motion_fps[i]
+            num_frames = self.motion_num_frames[i]
+            print(f"  - {motion_name}: duration={duration:.2f}s, fps={fps}, num_frames={num_frames}")
+        print("-"* 80)
+        # print joint mapping
+        print(f"Lab Joint Names: {self.lab_joint_names}")
+        print(f"Retargeted Joint Names: {self.retargeted_joint_names}")
+        print(f"Retargeted to Lab Joint Mapping: {self.retargeted_to_lab_mapping}")
+        print("-"* 80)
+        # print key links mapping
+        print(f"Lab Body Names: {self.lab_body_names}")
+        print(f"Retargeted Link Names: {self.retargeted_link_names}")
+        print(f"Retargeted Key Links Mapping: {self.retargeted_key_links_mapping}")
+        print("="* 80)
         
     def get_total_duration(self) -> float:
         """Get the total duration of all motions."""
@@ -366,8 +399,8 @@ class MotionLoader:
         dof_pos_1 = torch.empty([n, len(self.lab_joint_names)], dtype=torch.float32, device=self.device)
         dof_vel_0 = torch.empty([n, len(self.lab_joint_names)], dtype=torch.float32, device=self.device)
         dof_vel_1 = torch.empty([n, len(self.lab_joint_names)], dtype=torch.float32, device=self.device)
-        key_links_pos_w_0 = torch.empty([n, len(self.lab_key_links_names), 3], dtype=torch.float32, device=self.device)
-        key_links_pos_w_1 = torch.empty([n, len(self.lab_key_links_names), 3], dtype=torch.float32, device=self.device)
+        key_links_pos_w_0 = torch.empty([n, len(self.retargeted_key_links_mapping), 3], dtype=torch.float32, device=self.device)
+        key_links_pos_w_1 = torch.empty([n, len(self.retargeted_key_links_mapping), 3], dtype=torch.float32, device=self.device)
 
         motion_durations = self.motion_duration[motion_ids]
         num_frames = self.motion_num_frames[motion_ids]

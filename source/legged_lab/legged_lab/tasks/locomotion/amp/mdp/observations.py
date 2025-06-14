@@ -4,7 +4,8 @@ import torch
 from typing import TYPE_CHECKING
 
 import isaaclab.utils.math as math_utils
-from isaaclab.assets import Articulation
+import isaaclab.utils.string as string_utils
+from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import FrameTransformer
 
@@ -42,3 +43,41 @@ def key_links_pos(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityC
     num_envs = env.scene.num_envs
     return sensor.data.target_pos_source.reshape(num_envs, -1)
 
+def key_links_pos_b(env: ManagerBasedEnv, 
+                    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), 
+                    local_pos_dict: dict[str, float] = {}) -> torch.Tensor:
+    """Get the position of the key links in the base frame.
+
+    Args:
+        env (ManagerBasedEnv): The environment instance.
+        asset_cfg (SceneEntityCfg, optional): The configuration for the asset. Defaults to SceneEntityCfg("robot").
+        local_pos (dict[str, float], optional): Position of the key links in their parent frame.
+
+    Returns:
+        torch.Tensor: Position of the key links in the base frame. Shape is (N, M*3), 
+                    where N is the number of environments, and M is the number of key links.
+    """
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    indices, names, local_pos = string_utils.resolve_matching_names_values(
+        data=local_pos_dict,
+        list_of_strings=asset_cfg.body_names,
+        preserve_order=False
+    )
+    local_pos = torch.tensor(
+        local_pos,
+        dtype=torch.float32,
+        device=asset.data.root_pos_w.device
+    ).unsqueeze(0)  # shape: (1, M, 3)
+    local_pos = local_pos.expand(asset.data.root_pos_w.shape[0], -1, -1)  # shape: (num_instances, M, 3)
+    
+    # get the pose of the root in world frame
+    base_pos_w = asset.data.root_pos_w      # shape: (num_instances, 3).
+    base_quat_w = asset.data.root_quat_w    # shape: (num_instances, 4), w, x, y, z order.
+    # get the positions of the key links in world frame
+    parent_pos_w = asset.data.body_pos_w[:, asset_cfg.body_ids, :] # shape: (num_instances, M, 3)
+    parent_quat = asset.data.body_quat_w[:, asset_cfg.body_ids, :] # shape: (num_instances, M, 4)
+    key_links_pos_w = parent_pos_w + math_utils.quat_rotate(parent_quat, local_pos)
+    # get the positions of the key links in base frame
+    key_links_pos_b = math_utils.quat_rotate_inverse(base_quat_w.unsqueeze(1), key_links_pos_w - base_pos_w.unsqueeze(1))
+    return key_links_pos_b.reshape(base_pos_w.shape[0], -1)

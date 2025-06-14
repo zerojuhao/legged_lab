@@ -24,29 +24,30 @@ from legged_lab import LEGGED_LAB_ROOT_DIR
 
 @configclass
 class G1AmpSceneCfg(MySceneCfg):
-    frame_transformer = FrameTransformerCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/pelvis",
-        target_frames=[
-            FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_ankle_roll_link"),
-            FrameTransformerCfg.FrameCfg(
-                prim_path="{ENV_REGEX_NS}/Robot/left_wrist_yaw_link",
-                name="left_rubber_hand",
-                offset=OffsetCfg(
-                    pos=(0.0415, 0.003, 0), 
-                    rot=(1.0, 0.0, 0.0, 0.0)
-                )
-            ),
-            FrameTransformerCfg.FrameCfg(
-                prim_path="{ENV_REGEX_NS}/Robot/right_wrist_yaw_link",
-                name="right_rubber_hand",
-                offset=OffsetCfg(
-                    pos=(0.0415, -0.003, 0),
-                    rot=(1.0, 0.0, 0.0, 0.0)
-                )
-            ),
-        ], 
-        debug_vis=False
-    )
+    # frame_transformer = FrameTransformerCfg(
+    #     prim_path="{ENV_REGEX_NS}/Robot/pelvis",
+    #     target_frames=[
+    #         FrameTransformerCfg.FrameCfg(prim_path="{ENV_REGEX_NS}/Robot/.*_ankle_roll_link"),
+    #         FrameTransformerCfg.FrameCfg(
+    #             prim_path="{ENV_REGEX_NS}/Robot/left_wrist_yaw_link",
+    #             name="left_rubber_hand",
+    #             offset=OffsetCfg(
+    #                 pos=(0.0415, 0.003, 0), 
+    #                 rot=(1.0, 0.0, 0.0, 0.0)
+    #             )
+    #         ),
+    #         FrameTransformerCfg.FrameCfg(
+    #             prim_path="{ENV_REGEX_NS}/Robot/right_wrist_yaw_link",
+    #             name="right_rubber_hand",
+    #             offset=OffsetCfg(
+    #                 pos=(0.0415, -0.003, 0),
+    #                 rot=(1.0, 0.0, 0.0, 0.0)
+    #             )
+    #         ),
+    #     ], 
+    #     debug_vis=False
+    # )
+    pass
 
 @configclass
 class G1AmpRewards():
@@ -134,6 +135,16 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         
         # Observations
         self.observations.policy.height_scan = None
+        self.observations.amp.key_links_pos_b.params["asset_cfg"] = SceneEntityCfg(
+            "robot",
+            body_names=["left_ankle_roll_link", "right_ankle_roll_link", "left_wrist_yaw_link", "right_wrist_yaw_link"]
+        )
+        self.observations.amp.key_links_pos_b.params["local_pos_dict"] = {
+            "left_ankle_roll_link": (0.0, 0.0, 0.0),
+            "right_ankle_roll_link": (0.0, 0.0, 0.0),
+            "left_wrist_yaw_link": (0.0415, 0.003, 0.0),
+            "right_wrist_yaw_link": (0.0415, -0.003, 0.0),
+        }
         
         # Curriculum
         self.curriculum.terrain_levels = None
@@ -145,8 +156,8 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
 
         # Rewards
         # For AMP, we only needs a few rewards
-        self.rewards.track_lin_vel_xy_exp.weight = 24.0
-        self.rewards.track_ang_vel_z_exp.weight = 8.0
+        self.rewards.track_lin_vel_xy_exp.weight = 5.0
+        self.rewards.track_ang_vel_z_exp.weight = 2.0
         
         self.rewards.termination_penalty.weight = 0.0
         self.rewards.alive.weight = 0.1
@@ -182,7 +193,7 @@ class G1AmpFlatEnvCfg_PLAY(G1AmpFlatEnvCfg):
         super().__post_init__()
 
         # make a smaller scene for play
-        self.scene.num_envs = 50
+        self.scene.num_envs = 32
         self.scene.env_spacing = 2.5
         self.episode_length_s = 40.0
 

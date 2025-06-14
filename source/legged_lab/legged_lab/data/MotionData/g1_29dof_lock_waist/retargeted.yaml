@@ -1,5 +1,13 @@
 # This files contains some confgurations for the retargeted g1 dataset
 
+key_links_mapping:
+  # the keys are the names of the links in the motion dataset
+  # the values are the names of the links in lab 
+  left_ankle_roll_link: left_ankle_roll_link
+  right_ankle_roll_link: right_ankle_roll_link
+  left_rubber_hand: left_wrist_yaw_link
+  right_rubber_hand: right_wrist_yaw_link
+
 # add offsets to some joints, the order here does not matter
 # joint_offsets:
 #   # in [deg]

@@ -66,7 +66,7 @@ def main():
             # key_links_pos_b_his = amp_obs_dict["key_links_pos_b"].reshape(args_cli.num_envs, 2, -1, 3)  # shape: (N, 2, M, 3), 2 is history length, M is number of key links
             # key_links_pos_b = key_links_pos_b_his[:, 1, :, :]   # shape: (N, M, 3), only use the latest key links positions
             
-            key_links_pos_b = amp_obs[:, 37+37+3+3+1:37+37+3+3+1+48].reshape(args_cli.num_envs, -1, 3)  # shape: (N, M, 3), N is number of envs, M is number of key links
+            key_links_pos_b = amp_obs[:, 27+27:27+27+4*3].reshape(args_cli.num_envs, -1, 3)  # shape: (N, M, 3), N is number of envs, M is number of key links
             
             root_pos_w = robot.data.root_pos_w.unsqueeze(1) # shape: (N, 1, 3)
             root_quat_w = robot.data.root_quat_w.unsqueeze(1)  # shape: (N, 1, 4)
