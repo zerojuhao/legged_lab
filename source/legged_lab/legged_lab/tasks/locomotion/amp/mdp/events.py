@@ -49,6 +49,10 @@ def ref_state_init_root(
     motion_times = env.motion_loader.sample_times(motion_ids, truncate_time=dt)
     motion_state_dict = env.motion_loader.get_motion_state(motion_ids, motion_times)
     
+    lift_a_little = 0.05
+    # lift the root position a little bit to avoid collision with the ground
+    motion_state_dict["root_pos_w"][:, 2] += lift_a_little
+    
     ref_root_pos_w = motion_state_dict["root_pos_w"] + env.scene.env_origins[env_ids]
     ref_root_quat = motion_state_dict["root_quat"]
     ref_root_vel_w = motion_state_dict["root_vel_w"]

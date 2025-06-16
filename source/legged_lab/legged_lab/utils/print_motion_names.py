@@ -6,7 +6,7 @@ parser = argparse.ArgumentParser(description="Print motion names from a motion f
 parser.add_argument(
     "--robot",
     type=str,
-    default="g1",
+    default="g1_29dof_lock_waist",
     help="The robot to be used.",
 )
 parser.add_argument(
@@ -19,7 +19,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 LEGGED_LAB_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-motion_file = os.path.join(LEGGED_LAB_ROOT_DIR, "data", args.robot, args.motion_file)
+motion_file = os.path.join(LEGGED_LAB_ROOT_DIR, "data", "MotionData", args.robot, args.motion_file)
 
 assert os.path.exists(motion_file), f"Motion file {motion_file} does not exist, please check the file."
 

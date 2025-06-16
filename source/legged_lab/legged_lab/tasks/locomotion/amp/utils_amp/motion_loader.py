@@ -324,6 +324,8 @@ class MotionLoader:
         print(f"Lab Body Names: {self.lab_body_names}")
         print(f"Retargeted Link Names: {self.retargeted_link_names}")
         print(f"Retargeted Key Links Mapping: {self.retargeted_key_links_mapping}")
+        key_links = [self.retargeted_link_names[i] for i in self.retargeted_key_links_mapping]
+        print(f"Key links: {key_links}")
         print("="* 80)
         
     def get_total_duration(self) -> float:
@@ -550,3 +552,10 @@ class MotionLoader:
         """Extract the key links position in body frame from the motion state."""
         return motion_state["key_links_pos_b"].flatten(start_dim=1)  # (N, M*3), where M is the number of key links, and 3 is the x, y, z position in body frame
     
+    def _extract_projected_gravity(self, motion_state: dict) -> torch.Tensor:
+        """Extract the projected gravity from the motion state."""
+        gravity_vec_w = torch.tensor([0.0, 0.0, -1.0], dtype=torch.float32, device=self.device).unsqueeze(0)  # (1, 3)
+        root_quat = motion_state["root_quat"]  # (N, 4)
+        gravity_vec_w = gravity_vec_w.expand(root_quat.shape[0], -1)  # (N, 3)
+        projected_gravity = math_utils.quat_rotate_inverse(root_quat, gravity_vec_w)
+        return projected_gravity

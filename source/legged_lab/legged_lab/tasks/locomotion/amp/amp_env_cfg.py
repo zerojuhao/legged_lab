@@ -33,11 +33,12 @@ class AmpObservationsCfg(ObservationsCfg):
         
     @configclass
     class AmpCfg(ObsGroup):        
+        base_lin_vel_b: ObsTerm = ObsTerm(func=mdp.base_lin_vel)
+        base_ang_vel_b: ObsTerm = ObsTerm(func=mdp.base_ang_vel)
+        projected_gravity: ObsTerm = ObsTerm(func=mdp.projected_gravity)        
+        base_pos_z: ObsTerm = ObsTerm(func=mdp.base_pos_z)  # TODO: consider terrain height
         dof_pos: ObsTerm = ObsTerm(func=mdp.joint_pos)
         dof_vel: ObsTerm = ObsTerm(func=mdp.joint_vel)
-        # base_lin_vel_b: ObsTerm = ObsTerm(func=mdp.base_lin_vel)
-        # base_ang_vel_b: ObsTerm = ObsTerm(func=mdp.base_ang_vel)
-        # base_pos_z: ObsTerm = ObsTerm(func=mdp.base_pos_z)  # TODO: consider terrain height
         key_links_pos_b: ObsTerm = ObsTerm(
             func=mdp.key_links_pos_b, 
             params={

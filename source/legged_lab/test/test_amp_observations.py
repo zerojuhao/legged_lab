@@ -88,6 +88,7 @@ def main():
                 print("amp observations shape", amp_obs.shape)
                 # print("key links pos history shape", key_links_pos_b_his.shape)
                 print("key links pos shape", key_links_pos_b.shape)
+                print("key links pos in base frame", key_links_pos_b[0, :, :])
             
             count += 1
     

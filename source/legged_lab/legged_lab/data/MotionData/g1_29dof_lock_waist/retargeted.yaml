@@ -7,6 +7,16 @@ key_links_mapping:
   right_ankle_roll_link: right_ankle_roll_link
   left_rubber_hand: left_wrist_yaw_link
   right_rubber_hand: right_wrist_yaw_link
+  # head_link: waist_yaw_link
+  # left_shoulder_roll_link: left_shoulder_roll_link
+  # right_shoulder_roll_link: right_shoulder_roll_link
+  # left_hip_pitch_link: left_hip_pitch_link
+  # right_hip_pitch_link: right_hip_pitch_link
+  # left_elbow_link: left_elbow_link
+  # right_elbow_link: right_elbow_link
+
+
+
 
 # add offsets to some joints, the order here does not matter
 # joint_offsets:
@@ -17,10 +27,11 @@ key_links_mapping:
 # there are different motions in one motion data file, and each motion has a different weight
 # the motion names can be obtained by running `utils/print_motion_names.py`
 motion_weights: 
-  "Walk_B10___Walk_turn_left_45_poses": 1.0
-  "Walk_B13___Walk_turn_right_45_poses": 1.0
-  "Walk_B15___Walk_turn_around_poses": 1.0
-
-
+  "82_08_poses": 1.0
+  "77_02_poses": 1.0
+  "08_04_poses": 1.0
+  "16_34_poses": 1.0
+  "105_10_poses": 1.0
+  "105_27_poses": 1.0
 
 
