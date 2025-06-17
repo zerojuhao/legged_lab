@@ -313,7 +313,9 @@ class MotionLoader:
             duration = self.motion_duration[i]
             fps = self.motion_fps[i]
             num_frames = self.motion_num_frames[i]
-            print(f"  - {motion_name}: duration={duration:.2f}s, fps={fps}, num_frames={num_frames}")
+            base_lin_vel_avg = torch.mean(torch.norm(self.motion_data[i]["root_vel_w"], dim=1)).item()
+            base_lin_vel_max = torch.max(torch.norm(self.motion_data[i]["root_vel_w"], dim=1)).item()
+            print(f"  - {motion_name}: duration={duration:.2f}s, fps={fps}, num_frames={num_frames}, base_lin_vel_avg={base_lin_vel_avg:.2f}m/s, base_lin_vel_max={base_lin_vel_max:.2f}m/s")
         print("-"* 80)
         # print joint mapping
         print(f"Lab Joint Names: {self.lab_joint_names}")

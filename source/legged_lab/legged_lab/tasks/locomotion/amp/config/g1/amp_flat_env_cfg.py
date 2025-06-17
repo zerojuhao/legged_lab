@@ -119,13 +119,15 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
                 "right_ankle_roll_link", 
                 "left_wrist_yaw_link", 
                 "right_wrist_yaw_link",
-                # "waist_yaw_link",
+                "waist_yaw_link",
                 # "left_shoulder_roll_link",
                 # "right_shoulder_roll_link",
                 # "left_hip_pitch_link",
                 # "right_hip_pitch_link",
-                # "left_elbow_link",
-                # "right_elbow_link",
+                "left_elbow_link",
+                "right_elbow_link",
+                "left_knee_link", 
+                "right_knee_link",
             ]
         )
         self.observations.amp.key_links_pos_b.params["local_pos_dict"] = {
@@ -133,13 +135,15 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
             "right_ankle_roll_link": (0.0, 0.0, 0.0),
             "left_wrist_yaw_link": (0.0415, 0.003, 0.0),
             "right_wrist_yaw_link": (0.0415, -0.003, 0.0),
-            # "waist_yaw_link": (0.0, 0.0, 0.4),
+            "waist_yaw_link": (0.0, 0.0, 0.4),
             # "left_shoulder_roll_link": (0.0, 0.0, 0.0),
             # "right_shoulder_roll_link": (0.0, 0.0, 0.0),
             # "left_hip_pitch_link": (0.0, 0.0, 0.0),
             # "right_hip_pitch_link": (0.0, 0.0, 0.0),
-            # "left_elbow_link": (0.0, 0.0, 0.0),
-            # "right_elbow_link": (0.0, 0.0, 0.0),
+            "left_elbow_link": (0.0, 0.0, 0.0),
+            "right_elbow_link": (0.0, 0.0, 0.0),
+            "left_knee_link": (0.0, 0.0, 0.0),
+            "right_knee_link": (0.0, 0.0, 0.0),
         }
         
         # Curriculum
@@ -152,11 +156,11 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
 
         # Rewards
         # For AMP, we only needs a few rewards
-        self.rewards.track_lin_vel_xy_exp.weight = 1.5
+        self.rewards.track_lin_vel_xy_exp.weight = 1.0
         self.rewards.track_ang_vel_z_exp.weight = 0.5
         
         self.rewards.termination_penalty.weight = 0.0
-        self.rewards.alive.weight = 0.0
+        self.rewards.alive.weight = 0.1
         
         self.rewards.dof_pos_limits.weight = -0.0
         self.rewards.joint_deviation_hip.weight = -0.0
@@ -166,7 +170,7 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         
         
         # Commands
-        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 2.0)
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 2.0)
         self.commands.base_velocity.ranges.lin_vel_y = (-0.3, 0.3)
         self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
 

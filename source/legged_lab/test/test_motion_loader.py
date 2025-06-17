@@ -4,7 +4,7 @@ from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Tutorial on running the cartpole RL environment.")
-parser.add_argument("--num_envs", type=int, default=4, help="Number of environments to spawn.")
+parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to spawn.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -83,6 +83,11 @@ def main():
             root_pos = motion_data["root_pos_w"]
             root_quat = motion_data["root_quat"]
             dof_pos = motion_data["dof_pos"]
+            root_vel_w = motion_data["root_vel_w"]
+            root_ang_vel_w = motion_data["root_ang_vel_w"]
+            
+            root_vel_b = motion_data["root_vel_b"]
+            root_ang_vel_b = motion_data["root_ang_vel_b"]
             
             key_links_pos_b = motion_data["key_links_pos_b"]    # shape: (N, M, 3), N is number of envs, M is number of key links
             key_links_pos_w = root_pos.unsqueeze(1) + math_utils.quat_rotate(root_quat.unsqueeze(1), key_links_pos_b)
@@ -96,6 +101,8 @@ def main():
             robot_root_state[:, :3] = root_pos + env_origins
             robot_root_state[:, 3:7] = root_quat
             robot.write_root_pose_to_sim(robot_root_state[:, :7])
+            root_vel = torch.cat([root_vel_w, root_ang_vel_w], dim=-1)
+            robot.write_root_velocity_to_sim(root_vel)
             robot_dof_pos = robot.data.default_joint_pos.clone()
             robot_dof_pos[:, :len(dof_pos[0])] = dof_pos
             robot.write_joint_position_to_sim(robot_dof_pos)
@@ -103,6 +110,12 @@ def main():
             # only render, no physics step
             env.sim.render()
             
+            if count % 50 == 0:
+                print("-" * 80)
+                print(f"key_links_pos_b: {key_links_pos_b[0, :, :]}")
+                print(f"root velocity in body frame: {root_vel_b[0, :]}")
+                print(f"root angular velocity in body frame: {root_ang_vel_b[0, :]}")
+
             count += 1
             sim_time += sim_dt
             
