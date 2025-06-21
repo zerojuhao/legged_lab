@@ -17,7 +17,8 @@ simulation_app = app_launcher.app
 
 import torch
 
-import isaacsim.util.debug_draw._debug_draw as omni_debug_draw
+if not args_cli.headless:
+    import isaacsim.util.debug_draw._debug_draw as omni_debug_draw
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.assets import Articulation
 from isaaclab.sensors import FrameTransformer, FrameTransformerCfg, OffsetCfg
@@ -35,7 +36,8 @@ def main():
     
     env = AmpEnv(cfg=env_cfg)
     
-    draw_interface = omni_debug_draw.acquire_debug_draw_interface()
+    if not args_cli.headless:
+        draw_interface = omni_debug_draw.acquire_debug_draw_interface()
     
     count = 0
     obs, _ = env.reset()

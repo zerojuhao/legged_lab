@@ -269,14 +269,14 @@ class MotionLoader:
         # root velocity in world frame, shape (num_frames, 3)
         root_vel_w = vel_forward_diff(root_pos_w, dt)
         
-        # root velocity in body frame
-        root_vel_b = math_utils.quat_rotate_inverse(root_quat, root_vel_w)
+        # # root velocity in body frame
+        # root_vel_b = math_utils.quat_rotate_inverse(root_quat, root_vel_w)
         
         # root angular velocity in world frame, shape (num_frames, 3)
         root_ang_vel_w = ang_vel_from_quat_diff(root_quat, dt, in_frame="world")
         
-        # root angular velocity in body frame, shape (num_frames, 3)
-        root_ang_vel_b = ang_vel_from_quat_diff(root_quat, dt, in_frame="body")
+        # # root angular velocity in body frame, shape (num_frames, 3)
+        # root_ang_vel_b = ang_vel_from_quat_diff(root_quat, dt, in_frame="body")
 
         # joint position, shape (num_frames, num_joints)
         dof_pos = motion_raw_data["dof_pos"][:, self.retargeted_to_lab_mapping]
@@ -387,10 +387,8 @@ class MotionLoader:
         sample_times = phase * motion_durations
         return sample_times
 
-    def get_motion_state(self, motion_ids: torch.Tensor, motion_times: torch.Tensor) -> dict[str, torch.Tensor]:
-
-        n = motion_ids.shape[0]
-        
+    def _allocate_temp_tensors(self, n):
+        """Allocate temporary tensors for motion state computation."""
         root_pos_w_0 = torch.empty([n, 3], dtype=torch.float32, device=self.device)
         root_pos_w_1 = torch.empty([n, 3], dtype=torch.float32, device=self.device)
         root_quat_0 = torch.empty([n, 4], dtype=torch.float32, device=self.device)
@@ -406,6 +404,28 @@ class MotionLoader:
         key_links_pos_w_0 = torch.empty([n, len(self.retargeted_key_links_mapping), 3], dtype=torch.float32, device=self.device)
         key_links_pos_w_1 = torch.empty([n, len(self.retargeted_key_links_mapping), 3], dtype=torch.float32, device=self.device)
 
+        return (root_pos_w_0, root_pos_w_1,
+                root_quat_0, root_quat_1,
+                root_vel_w_0, root_vel_w_1,
+                root_ang_vel_w_0, root_ang_vel_w_1,
+                dof_pos_0, dof_pos_1,
+                dof_vel_0, dof_vel_1,
+                key_links_pos_w_0, key_links_pos_w_1)
+    
+    def get_motion_state(self, motion_ids: torch.Tensor, motion_times: torch.Tensor) -> dict[str, torch.Tensor]:
+
+        n = motion_ids.shape[0]
+        
+        if not hasattr(self, "root_pos_w_0") or self.root_pos_w_0.shape[0] != n:
+            # allocate new tensors if the number of motion_ids has changed
+            (self.root_pos_w_0, self.root_pos_w_1,
+             self.root_quat_0, self.root_quat_1,
+             self.root_vel_w_0, self.root_vel_w_1,
+             self.root_ang_vel_w_0, self.root_ang_vel_w_1,
+             self.dof_pos_0, self.dof_pos_1,
+             self.dof_vel_0, self.dof_vel_1,
+             self.key_links_pos_w_0, self.key_links_pos_w_1) = self._allocate_temp_tensors(n)
+        
         motion_durations = self.motion_duration[motion_ids]
         num_frames = self.motion_num_frames[motion_ids]
         dt = self.motion_dt[motion_ids]
@@ -418,41 +438,41 @@ class MotionLoader:
             mask = inverse_indices == i
             ids = torch.where(mask)[0]
             motion = self.get_motion(uid.item())
-            
-            root_pos_w_0[ids, :] = motion["root_pos_w"][frame_idx0[ids], :]
-            root_pos_w_1[ids, :] = motion["root_pos_w"][frame_idx1[ids], :]
-            
-            root_quat_0[ids, :] = motion["root_quat"][frame_idx0[ids], :]
-            root_quat_1[ids, :] = motion["root_quat"][frame_idx1[ids], :]
-            
-            root_vel_w_0[ids, :] = motion["root_vel_w"][frame_idx0[ids], :]
-            root_vel_w_1[ids, :] = motion["root_vel_w"][frame_idx1[ids], :]
-            
-            root_ang_vel_w_0[ids, :] = motion["root_ang_vel_w"][frame_idx0[ids], :]
-            root_ang_vel_w_1[ids, :] = motion["root_ang_vel_w"][frame_idx1[ids], :]
-            
-            dof_pos_0[ids, :] = motion["dof_pos"][frame_idx0[ids], :]
-            dof_pos_1[ids, :] = motion["dof_pos"][frame_idx1[ids], :]
-            
-            dof_vel_0[ids, :] = motion["dof_vel"][frame_idx0[ids], :]
-            dof_vel_1[ids, :] = motion["dof_vel"][frame_idx1[ids], :]
-            
-            key_links_pos_w_0[ids, :, :] = motion["key_links_pos_w"][frame_idx0[ids], :, :]
-            key_links_pos_w_1[ids, :, :] = motion["key_links_pos_w"][frame_idx1[ids], :, :]
-            
+
+            self.root_pos_w_0[ids, :] = motion["root_pos_w"][frame_idx0[ids], :]
+            self.root_pos_w_1[ids, :] = motion["root_pos_w"][frame_idx1[ids], :]
+
+            self.root_quat_0[ids, :] = motion["root_quat"][frame_idx0[ids], :]
+            self.root_quat_1[ids, :] = motion["root_quat"][frame_idx1[ids], :]
+
+            self.root_vel_w_0[ids, :] = motion["root_vel_w"][frame_idx0[ids], :]
+            self.root_vel_w_1[ids, :] = motion["root_vel_w"][frame_idx1[ids], :]
+
+            self.root_ang_vel_w_0[ids, :] = motion["root_ang_vel_w"][frame_idx0[ids], :]
+            self.root_ang_vel_w_1[ids, :] = motion["root_ang_vel_w"][frame_idx1[ids], :]
+
+            self.dof_pos_0[ids, :] = motion["dof_pos"][frame_idx0[ids], :]
+            self.dof_pos_1[ids, :] = motion["dof_pos"][frame_idx1[ids], :]
+
+            self.dof_vel_0[ids, :] = motion["dof_vel"][frame_idx0[ids], :]
+            self.dof_vel_1[ids, :] = motion["dof_vel"][frame_idx1[ids], :]
+
+            self.key_links_pos_w_0[ids, :, :] = motion["key_links_pos_w"][frame_idx0[ids], :, :]
+            self.key_links_pos_w_1[ids, :, :] = motion["key_links_pos_w"][frame_idx1[ids], :, :]
+
         # interpolate the values
-        
-        root_quat = quat_slerp(q0=root_quat_0, q1=root_quat_1, blend=blend)
-        
+
+        root_quat = quat_slerp(q0=self.root_quat_0, q1=self.root_quat_1, blend=blend)
+
         blend = blend.unsqueeze(-1)  # make it (n, 1) for broadcasting
-        root_pos_w = linear_interpolate(root_pos_w_0, root_pos_w_1, blend)
-        root_vel_w = linear_interpolate(root_vel_w_0, root_vel_w_1, blend)
+        root_pos_w = linear_interpolate(self.root_pos_w_0, self.root_pos_w_1, blend)
+        root_vel_w = linear_interpolate(self.root_vel_w_0, self.root_vel_w_1, blend)
         root_vel_b = math_utils.quat_rotate_inverse(root_quat, root_vel_w)
-        root_ang_vel_w = linear_interpolate(root_ang_vel_w_0, root_ang_vel_w_1, blend)
+        root_ang_vel_w = linear_interpolate(self.root_ang_vel_w_0, self.root_ang_vel_w_1, blend)
         root_ang_vel_b = math_utils.quat_rotate_inverse(root_quat, root_ang_vel_w)
-        dof_pos = linear_interpolate(dof_pos_0, dof_pos_1, blend)
-        dof_vel = linear_interpolate(dof_vel_0, dof_vel_1, blend)
-        key_links_pos_w = linear_interpolate(key_links_pos_w_0, key_links_pos_w_1, blend.unsqueeze(1))
+        dof_pos = linear_interpolate(self.dof_pos_0, self.dof_pos_1, blend)
+        dof_vel = linear_interpolate(self.dof_vel_0, self.dof_vel_1, blend)
+        key_links_pos_w = linear_interpolate(self.key_links_pos_w_0, self.key_links_pos_w_1, blend.unsqueeze(1))
         key_links_pos_b = math_utils.quat_rotate_inverse(root_quat.unsqueeze(1), key_links_pos_w - root_pos_w.unsqueeze(1))
         
         return {
@@ -503,32 +523,27 @@ class MotionLoader:
             else:
                 raise ValueError(f"[MotionLoader] Observation term '{term}' is not supported, please check the observation terms in the config file.")
         
+        motion_state_dict = self.get_motion_state(motion_ids, motion_times)
+        motion_next_state_dict = self.get_motion_state(motion_ids, motion_next_times)
+        
+        motion_state = []
+        motion_next_state = []
+        for func in extract_funcs:
+            motion_state.append(func(motion_state_dict))
+            motion_next_state.append(func(motion_next_state_dict))
+        motion_state_tensor = torch.cat(motion_state, dim=-1).to(self.device)  # (N, D), where D is the total dimension of the motion state
+        motion_next_state_tensor = torch.cat(motion_next_state, dim=-1).to(self.device)  # (N, D), where D is the total dimension of the motion state
+        
+        motion_two_state_tensor = torch.cat([motion_state_tensor, motion_next_state_tensor], dim=1)  # (N, 2*D)
+        
         for epoch in range(num_epochs):
-            indices = np.random.permutation(batch_size)  # use numpy for random permutation
+            indices = torch.randperm(batch_size, device=self.device)
             for i in range(num_mini_batches):
                 start = i * mini_batch_size
                 end = (i + 1) * mini_batch_size
                 mini_batch_idx = indices[start:end]
                 
-                motion_state_dict = self.get_motion_state(
-                    motion_ids[mini_batch_idx], 
-                    motion_times[mini_batch_idx]
-                )
-                motion_next_state_dict = self.get_motion_state(
-                    motion_ids[mini_batch_idx], 
-                    motion_next_times[mini_batch_idx]
-                )
-                
-                motion_state = []
-                motion_next_state = []
-                for func in extract_funcs:
-                    motion_state.append(func(motion_state_dict))
-                    motion_next_state.append(func(motion_next_state_dict))
-                motion_state_tensor = torch.cat(motion_state, dim=-1).to(self.device)  # (N, D), where D is the total dimension of the motion state
-                motion_next_state_tensor = torch.cat(motion_next_state, dim=-1).to(self.device)  # (N, D), where D is the total dimension of the motion state
-                
-                motion_two_state_tensor = torch.cat([motion_state_tensor, motion_next_state_tensor], dim=1)  # (N, 2*D)
-                yield motion_two_state_tensor
+                yield motion_two_state_tensor[mini_batch_idx]
 
 
     def _extract_dof_pos(self, motion_state: dict) -> torch.Tensor:
