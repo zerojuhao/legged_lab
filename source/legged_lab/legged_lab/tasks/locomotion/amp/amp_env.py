@@ -86,8 +86,7 @@ class AmpEnv(ManagerBasedRLEnv):
         
         # load the motion loader
         self.motion_loader: MotionLoader = MotionLoader(
-            motion_file=cfg.motion_file_path,
-            cfg_file=cfg.motion_cfg_path,
+            cfg=cfg.motion_loader,
             env=self,
             device=self.device
         )

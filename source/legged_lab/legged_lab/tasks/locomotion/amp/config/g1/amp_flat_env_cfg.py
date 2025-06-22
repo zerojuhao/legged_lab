@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import os
-
+import math
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
@@ -102,7 +102,9 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # post init of parent
         super().__post_init__()
         
+        # ------------------------------------------------------
         # Scene
+        # ------------------------------------------------------
         self.scene.robot = G1_29DOF_LOCK_WAIST_MINIMAL_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         # plane terrain
         self.scene.terrain.terrain_type = "plane"
@@ -110,14 +112,40 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # no height scan
         self.scene.height_scanner = None
         
+        # ------------------------------------------------------
+        # motion loader
+        # ------------------------------------------------------
+        self.motion_loader.motion_file_path = os.path.join(
+            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof_lock_waist", "retargeted_motion.pkl"
+        )
+        self.motion_loader.key_links_mapping = {
+            # the keys are the names of the links in the motion dataset
+            # the values are the names of the links in lab 
+            "left_ankle_roll_link": "left_ankle_roll_link",
+            "right_ankle_roll_link": "right_ankle_roll_link",
+            "left_rubber_hand": "left_wrist_yaw_link",
+            "right_rubber_hand": "right_wrist_yaw_link",
+        }
+        self.motion_loader.motion_weights = {
+            # the motion names can be obtained by running `utils/print_motion_names.py`
+            # "20_05_poses": 1.0,      # walk with arm
+            # "22_25_poses": 1.0,      # slow walk
+            # "10_04_poses": 1.0,      # walk from stand
+            "08_09_poses": 1.0,      # walk fast in large step
+            "08_03_poses": 1.0,      # walk fast in large step
+            "08_04_poses": 1.0,      # walk slow in large step
+            # "08_06_poses": 1.0,      # walk fast in large step
+            # "08_08_poses": 1.0,      # walk fast in large step
+            # "16_34_poses": 1.0,      # slow walk and stop
+            "77_02_poses": 1.0,      # stand
+            # "82_08_poses": 1.0,      # stand, then slow walk
+            # "105_10_poses": 1.0,     # walk and turn 180
+            # "105_27_poses": 1.0,     # walk and turn 180
+        }
+        
+        # ------------------------------------------------------
         # Observations
-        # self.observations.policy.key_links_pos_b.params["local_pos_dict"] = {
-        #     "left_ankle_roll_link": (0.0, 0.0, 0.0),
-        #     "right_ankle_roll_link": (0.0, 0.0, 0.0),
-        #     "left_wrist_yaw_link": (0.0415, 0.003, 0.0),
-        #     "right_wrist_yaw_link": (0.0415, -0.003, 0.0),
-        # }
-        self.observations.policy.key_links_pos_b = None
+        # ------------------------------------------------------
         self.observations.amp.key_links_pos_b.params["local_pos_dict"] = {
             "left_ankle_roll_link": (0.0, 0.0, 0.0),
             "right_ankle_roll_link": (0.0, 0.0, 0.0),
@@ -134,15 +162,21 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
             # "right_knee_link": (0.0, 0.0, 0.0),
         }
         
+        # ------------------------------------------------------
         # Curriculum
+        # ------------------------------------------------------
         self.curriculum.terrain_levels = None
         
+        # ------------------------------------------------------
         # Events
+        # ------------------------------------------------------
         self.events.push_robot = None
         self.events.add_base_mass = None
         self.events.base_external_force_torque.params["asset_cfg"].body_names = ["waist_yaw_link"]
 
+        # ------------------------------------------------------
         # Rewards
+        # ------------------------------------------------------
         # For AMP, we only needs a few rewards
         self.rewards.track_lin_vel_xy_exp.weight = 1.5
         self.rewards.track_ang_vel_z_exp.weight = 0.5
@@ -157,23 +191,20 @@ class G1AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         self.rewards.joint_deviation_waist.weight = -0.0
         
         
+        # ------------------------------------------------------
         # Commands
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.0, 1.5)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
-        self.commands.base_velocity.ranges.heading = (-0.0, 0.0)
+        # ------------------------------------------------------
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 1.5)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
+        self.commands.base_velocity.ranges.heading = (-math.pi, math.pi)
 
+        
+        # ------------------------------------------------------
         # terminations
+        # ------------------------------------------------------
         self.terminations.base_contact.params["sensor_cfg"].body_names = "waist_yaw_link"
         
-        # motion loader
-        self.motion_file_path = os.path.join(
-            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof_lock_waist", "retargeted_motion.pkl"
-        )
-        self.motion_cfg_path = os.path.join(
-            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof_lock_waist", "retargeted.yaml"
-        )
-
 
 @configclass
 class G1AmpFlatEnvCfg_PLAY(G1AmpFlatEnvCfg):
@@ -188,7 +219,7 @@ class G1AmpFlatEnvCfg_PLAY(G1AmpFlatEnvCfg):
 
         self.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.5)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
         self.commands.base_velocity.ranges.heading = (0.0, 0.0)
         # disable randomization for play
         self.observations.policy.enable_corruption = False

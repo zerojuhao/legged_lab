@@ -87,20 +87,13 @@ class MotionLoader:
             contains the necessary parameters for loading the motion data.
         device (str): Device to load the motion data onto, default is "cuda:0".
     """
-    def __init__(self, motion_file, cfg_file, env: ManagerBasedEnv, device: str = "cuda:0") -> None:
+    def __init__(self, cfg, env: ManagerBasedEnv, device: str = "cuda:0") -> None:
         self.device = device
         self.env = env
+        self.cfg = cfg
 
-        assert os.path.exists(motion_file), f"[MotionLoader] Motion file {motion_file} does not exist, please check the file."
-        assert os.path.exists(cfg_file), f"[MotionLoader] Config file {cfg_file} does not exist, please check the file."
+        assert os.path.exists(self.cfg.motion_file_path), f"[MotionLoader] Motion file {self.cfg.motion_file_path} does not exist, please check the file."
 
-        self.motion_file = motion_file
-        self.cfg_file = cfg_file
-        
-        # load config file
-        with open(cfg_file, "r") as f:
-            self.cfg: dict = yaml.safe_load(f)
-        
         self._load_motion_data()
         self.motion_ids = torch.arange(len(self.motion_names), dtype=torch.long, device=self.device)
         
@@ -112,10 +105,10 @@ class MotionLoader:
         robot:Articulation = self.env.scene["robot"]
         self.lab_joint_names = robot.data.joint_names
             
-        if "joint_mapping" in self.cfg:
+        if hasattr(self.cfg, "joint_mapping"):
             # if joint names in retarget motion data are different from the lab joint names,
-            # we need to load the joint mapping from the config file
-            raise NotImplementedError("Joint mapping from config file is not implemented yet.")
+            # we need to load the joint mapping from the config
+            raise NotImplementedError("Joint mapping from config is not implemented yet.")
         else:
             # else, we assume the joint names in the retargeted motion data are the same as the lab joint names, 
             # and we only need to rearrange them to match the order in the lab joint names
@@ -134,42 +127,28 @@ class MotionLoader:
         """
         Build the mapping from lab key links names to retargeted key links names.
         """
-        if "key_links_mapping" in self.cfg:
-            # if key links names in retarget motion data are different from the lab key links names,
-            # we need to load the key links mapping from the config file
-            key_links_mapping = self.cfg["key_links_mapping"]
-            name_lab_idx_retargeted = {}
-            for retargeted_name, lab_name in key_links_mapping.items():
-                if retargeted_name not in self.retargeted_link_names:
-                    raise ValueError(f"[MotionLoader] Retargeted link name {retargeted_name} not found in retargeted motion data {self.retargeted_link_names}.")
-                name_lab_idx_retargeted[lab_name] = self.retargeted_link_names.index(retargeted_name)
-            robot:Articulation = self.env.scene["robot"]
-            self.lab_body_names = robot.data.body_names
-            indices, names, values = string_utils.resolve_matching_names_values(
-                data=name_lab_idx_retargeted, 
-                list_of_strings=self.lab_body_names, 
-                preserve_order=False
-            )
-            self.retargeted_key_links_mapping = values
-        else:
-            # else, we assume the key links names in the retargeted motion data are the same as the lab key links names,
-            # and we only need to rearrange them to match the order in the lab key links names
-            frame_transformer: FrameTransformer = self.env.scene.sensors["frame_transformer"]
-            self.lab_key_links_names = frame_transformer.data.target_frame_names
-            try:
-                self.retargeted_key_links_mapping, _ = string_utils.resolve_matching_names(
-                    keys=self.lab_key_links_names, 
-                    list_of_strings=self.retargeted_link_names,
-                    preserve_order=True
-                )
-            except ValueError as e:
-                print(f"[MotionLoader] Error in resolving key links names: {e}")
-                raise ValueError(f"[MotionLoader] Key links names in retargeted motion data {self.retargeted_link_names} do not match the lab key links names {self.lab_key_links_names}.")
+
+        # key links names in retarget motion data may be different from the lab key links names,
+        # we need to load the key links mapping from the config
+        key_links_mapping = self.cfg.key_links_mapping
+        name_lab_idx_retargeted = {}
+        for retargeted_name, lab_name in key_links_mapping.items():
+            if retargeted_name not in self.retargeted_link_names:
+                raise ValueError(f"[MotionLoader] Retargeted link name {retargeted_name} not found in retargeted motion data {self.retargeted_link_names}.")
+            name_lab_idx_retargeted[lab_name] = self.retargeted_link_names.index(retargeted_name)
+        robot:Articulation = self.env.scene["robot"]
+        self.lab_body_names = robot.data.body_names
+        indices, names, values = string_utils.resolve_matching_names_values(
+            data=name_lab_idx_retargeted, 
+            list_of_strings=self.lab_body_names, 
+            preserve_order=False
+        )
+        self.retargeted_key_links_mapping = values
 
     def _load_joint_offsets(self):
         """Load the joint offsets from the configuration file."""
         self.joint_offsets = np.zeros(len(self.lab_joint_names), dtype=np.float32)
-        self.joint_offsets_dict = self.cfg.get("joint_offsets", None)
+        self.joint_offsets_dict = self.cfg.joint_offsets if hasattr(self.cfg, "joint_offsets") else None
         if self.joint_offsets_dict is None:
             return
         assert isinstance(self.joint_offsets_dict, dict), f"[MotionLoader] Joint offsets should be a dictionary, but got {type(self.joint_offsets_dict)}."
@@ -187,7 +166,7 @@ class MotionLoader:
         # - `dof_names`: a list of joint names in the retargeted motion data.
         # - `joint_names_robot`: a list of joint names in the robot model. Note that the joint here refers to the cartesian joint, not the dof joint.
         # - `joint_names_smpl`: a list of joint names in the SMPL model. Note that the joint here refers to the cartesian joint, not the dof joint.
-        motion_dict = joblib.load(self.motion_file)
+        motion_dict = joblib.load(self.cfg.motion_file_path)
         self.motion_data_dict = motion_dict["retarget_data"]
         self.retargeted_joint_names = motion_dict["dof_names"]
         self.retargeted_link_names = motion_dict["joint_names_robot"]
@@ -196,11 +175,10 @@ class MotionLoader:
         self._build_key_links_mapping()
         self._load_joint_offsets()
 
-        self.motion_weights_dict = self.cfg.get("motion_weights", None)
-        assert self.motion_weights_dict is not None, f"[MotionLoader] Motion weights not found in config file {self.cfg_file}."
+        self.motion_weights_dict = self.cfg.motion_weights
         for key in self.motion_weights_dict:
             if key not in self.motion_data_dict:
-                raise ValueError(f"[MotionLoader] Motion {key} not found in motion data file {self.motion_file}.")
+                raise ValueError(f"[MotionLoader] Motion {key} not found in motion data file {self.cfg.motion_file_path}.")
         
         # only load those motions that are in the motion_weights
         self.motion_names = list(self.motion_weights_dict.keys())

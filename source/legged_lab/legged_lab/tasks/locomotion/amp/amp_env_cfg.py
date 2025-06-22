@@ -46,13 +46,6 @@ class AmpObservationsCfg():
         joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         actions = ObsTerm(func=mdp.last_action)
-        key_links_pos_b: ObsTerm = ObsTerm(
-            func=mdp.key_links_pos_b, 
-            params={
-                "asset_cfg": SceneEntityCfg("robot"), 
-                "local_pos_dict": MISSING,
-            }
-        )
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -84,7 +77,7 @@ class AmpObservationsCfg():
             self.flatten_history_dim = False    # if True, it will flatten each term history first and then concatenate them, 
                                                 # which is not we want for AMP observations
                                                 # Thus, we set it to False, and address it manually
-    
+    # AMP observations group
     amp: AmpCfg = AmpCfg()
     
 
@@ -109,18 +102,29 @@ class AmpEventCfg(EventCfg):
 
 
 @configclass
+class MotionLoaderCfg():
+    """Configuration for loading motion data."""
+    motion_file_path: str = MISSING
+    """Path to the motion file for AMP."""
+    
+    key_links_mapping: dict[str, str] = MISSING
+    """Mapping of key links to their corresponding names in the motion data.
+    - the keys are the names of the links in the motion dataset
+    - the values are the names of the links in lab 
+    """
+    
+    motion_weights: dict[str, float] = MISSING
+    """Weights for the motion data."""
+
+
+@configclass
 class LocomotionAmpEnvCfg(LocomotionVelocityRoughEnvCfg):
     """
     Environment configuration for the AMP locomotion task.
     """
     observations: AmpObservationsCfg = AmpObservationsCfg()
     events: AmpEventCfg = AmpEventCfg()
-    
-    motion_file_path: str = MISSING
-    """Path to the motion file for AMP."""
-    
-    motion_cfg_path: str = MISSING
-    """Path to the motion configuration file for AMP."""
+    motion_loader: MotionLoaderCfg = MotionLoaderCfg()
     
     def __post_init__(self):
         
