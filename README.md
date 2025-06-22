@@ -1,4 +1,4 @@
-# Template for Isaac Lab Projects
+# Legged Lab
 
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
 [![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.1.0-silver)](https://isaac-sim.github.io/IsaacLab)
@@ -10,14 +10,19 @@
 
 ## Overview
 
-This repository serves as a template for building projects or extensions based on Isaac Lab. It allows you to develop in an isolated environment, outside of the core Isaac Lab repository.
+This repository is an extension for legged robot reinforcement learning based on Isaac Lab, which allows to develop in an isolated environment, outside of the core Isaac Lab repository. The RL algorithm is based on a [forked RSL-RL library](https://github.com/zitongbai/rsl_rl/tree/feature/amp). 
 
 **Key Features:**
 
-- `Isolation` Work outside the core Isaac Lab repository, ensuring that your development efforts remain self-contained.
-- `Flexibility` This template is set up to allow your code to be run as an extension in Omniverse.
+- `RL` Support vanilla RL for legged robots, including Unitree G1, Go2.
+- `AMP` Adversarial Motion Priors (AMP) for humanoid robots, including Unitree G1. 
 
-**Keywords:** extension, template, isaaclab
+## TODOS
+
+- [ ] Add more details about motion retargeting
+- [ ] Add more legged robots, such as Unitree H1
+- [ ] Asymmetric Actor-Critic in AMP
+- [ ] Sim2sim in mujoco
 
 ## Installation
 
@@ -27,19 +32,10 @@ This repository serves as a template for building projects or extensions based o
 
 ```bash
 # Option 1: HTTPS
-git clone https://github.com/isaac-sim/IsaacLabExtensionTemplate.git
+git clone https://github.com/zitongbai/legged_lab
 
 # Option 2: SSH
-git clone git@github.com:isaac-sim/IsaacLabExtensionTemplate.git
-```
-
-- Throughout the repository, the name `legged_lab` only serves as an example and we provide a script to rename all the references to it automatically:
-
-```bash
-# Enter the repository
-cd IsaacLabExtensionTemplate
-# Rename all occurrences of legged_lab (in files/directories) to your_fancy_extension_name
-python scripts/rename_template.py your_fancy_extension_name
+git clone git@github.com:zitongbai/legged_lab.git
 ```
 
 - Using a python interpreter that has Isaac Lab installed, install the library
@@ -48,110 +44,82 @@ python scripts/rename_template.py your_fancy_extension_name
 python -m pip install -e source/legged_lab
 ```
 
+- Clone the forked RSL-RL library separately from the Isaac Lab installation and legged_lab repository (i.e. outside the `IsaacLab` and `legged_lab` directories):
+
+```bash
+# Option 1: HTTPS
+git clone https://github.com/zitongbai/rsl_rl.git
+# Option 2: SSH
+git clone git@github.com:zitongbai/rsl_rl.git
+
+cd rsl_rl
+git checkout feature/amp
+```
+
+- Install the forked RSL-RL library:
+
+```bash
+# in the rsl_rl directory
+python -m pip install -e .
+```
+
+- Download the usd model for Unitree G1:
+
+```bash
+# in legged lab directory
+gdown "https://drive.google.com/drive/folders/1rlhZcurMenq4RGojZVUDl3a6Ja2hm-di?usp=drive_link" --folder -O ./source/legged_lab/legged_lab/data/Robots/
+```
+
+- Download the motion data for Unitree G1:
+
+```bash
+# in legged lab directory
+gdown "https://drive.google.com/drive/folders/1tXtyjgM_wwqWNwnpn8ny5b4q1c-GxZkm?usp=sharing" --folder -O ./source/legged_lab/legged_lab/data/
+```
+
 - Verify that the extension is correctly installed by running the following command:
 
 ```bash
-python scripts/rsl_rl/train.py --task=Template-Isaac-Velocity-Rough-Anymal-D-v0
+python scripts/rsl_rl/train.py --task=LeggedLab-Isaac-Velocity-Rough-G1-v0 --headless
 ```
 
-### Set up IDE (Optional)
+## Train
 
-To setup the IDE, please follow these instructions:
+### RL
 
-- Run VSCode Tasks, by pressing `Ctrl+Shift+P`, selecting `Tasks: Run Task` and running the `setup_python_env` in the drop down menu. When running this task, you will be prompted to add the absolute path to your Isaac Sim installation.
-
-If everything executes correctly, it should create a file .python.env in the `.vscode` directory. The file contains the python paths to all the extensions provided by Isaac Sim and Omniverse. This helps in indexing all the python modules for intelligent suggestions while writing code.
-
-### Setup as Omniverse Extension (Optional)
-
-We provide an example UI extension that will load upon enabling your extension defined in `source/legged_lab/legged_lab/ui_extension_example.py`.
-
-To enable your extension, follow these steps:
-
-1. **Add the search path of your repository** to the extension manager:
-    - Navigate to the extension manager using `Window` -> `Extensions`.
-    - Click on the **Hamburger Icon** (☰), then go to `Settings`.
-    - In the `Extension Search Paths`, enter the absolute path to `IsaacLabExtensionTemplate/source`
-    - If not already present, in the `Extension Search Paths`, enter the path that leads to Isaac Lab's extension directory directory (`IsaacLab/source`)
-    - Click on the **Hamburger Icon** (☰), then click `Refresh`.
-
-2. **Search and enable your extension**:
-    - Find your extension under the `Third Party` category.
-    - Toggle it to enable your extension.
-
-## Docker setup
-
-### Building Isaac Lab Base Image
-
-Currently, we don't have the Docker for Isaac Lab publicly available. Hence, you'd need to build the docker image
-for Isaac Lab locally by following the steps [here](https://isaac-sim.github.io/IsaacLab/main/source/deployment/index.html).
-
-Once you have built the base Isaac Lab image, you can check it exists by doing:
+To train the reinforcement learning for Unitree G1, you can run the following command:
 
 ```bash
-docker images
-
-# Output should look something like:
-#
-# REPOSITORY                       TAG       IMAGE ID       CREATED          SIZE
-# isaac-lab-base                   latest    28be62af627e   32 minutes ago   18.9GB
+python scripts/rsl_rl/train.py --task=LeggedLab-Isaac-Velocity-Rough-G1-v0 --headless
 ```
 
-### Building Isaac Lab Template Image
+For more details about the arguments, run `python scripts/rsl_rl/train.py -h`.
 
-Following above, you can build the docker container for this project. It is called `isaac-lab-template`. However,
-you can modify this name inside the [`docker/docker-compose.yaml`](docker/docker-compose.yaml).
+### AMP
+
+To train the AMP algorithm, you can run the following command:
 
 ```bash
-cd docker
-docker compose --env-file .env.base --file docker-compose.yaml build isaac-lab-template
+python scripts/rsl_rl/train.py --task LeggedLab-Isaac-AMP-Flat-G1-v0 --headless --max_iterations 10000
 ```
 
-You can verify the image is built successfully using the same command as earlier:
+If you want to train it in a non-default gpu, you can pass more arguments to the command:
 
 ```bash
-docker images
-
-# Output should look something like:
-#
-# REPOSITORY                       TAG       IMAGE ID       CREATED             SIZE
-# isaac-lab-template               latest    00b00b647e1b   2 minutes ago       18.9GB
-# isaac-lab-base                   latest    892938acb55c   About an hour ago   18.9GB
+# replace `x` with the gpu id you want to use
+python scripts/rsl_rl/train.py --task LeggedLab-Isaac-AMP-Flat-G1-v0 --headless --max_iterations 10000 --device cuda:x agent.device=cuda:x
 ```
 
-### Running the container
+## Play
 
-After building, the usual next step is to start the containers associated with your services. You can do this with:
+You can play the trained model in a headless mode and record the video: 
 
 ```bash
-docker compose --env-file .env.base --file docker-compose.yaml up
+# replace the checkpoint path with the path to your trained model
+python scripts/rsl_rl/play.py --task LeggedLab-Isaac-AMP-Flat-G1-Play-v0 --headless --num_envs 64 --video --checkpoint logs/rsl_rl/experiment_name/run_name/model_xxx.pt
 ```
 
-This will start the services defined in your `docker-compose.yaml` file, including isaac-lab-template.
-
-If you want to run it in detached mode (in the background), use:
-
-```bash
-docker compose --env-file .env.base --file docker-compose.yaml up -d
-```
-
-### Interacting with a running container
-
-If you want to run commands inside the running container, you can use the `exec` command:
-
-```bash
-docker exec --interactive --tty -e DISPLAY=${DISPLAY} isaac-lab-template /bin/bash
-```
-
-### Shutting down the container
-
-When you are done or want to stop the running containers, you can bring down the services:
-
-```bash
-docker compose --env-file .env.base --file docker-compose.yaml down
-```
-
-This stops and removes the containers, but keeps the images.
+The video will be saved in the `logs/rsl_rl/experiment_name/run_name/videos/play` directory.
 
 ## Code formatting
 
