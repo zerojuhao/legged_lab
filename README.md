@@ -17,10 +17,13 @@ This repository is an extension for legged robot reinforcement learning based on
 - `RL` Support vanilla RL for legged robots, including Unitree G1, Go2.
 - `AMP` Adversarial Motion Priors (AMP) for humanoid robots, including Unitree G1. 
 
+https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
+
 ## TODOS
 
 - [ ] Add more details about motion retargeting
 - [ ] Add more legged robots, such as Unitree H1
+- [ ] Self-contact penalty in AMP
 - [ ] Asymmetric Actor-Critic in AMP
 - [ ] Sim2sim in mujoco
 
