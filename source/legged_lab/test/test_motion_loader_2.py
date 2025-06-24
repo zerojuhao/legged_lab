@@ -4,15 +4,12 @@ from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Tutorial on running the cartpole RL environment.")
-parser.add_argument("--num_envs", type=int, default=4096, help="Number of environments to spawn.")
+parser.add_argument("--num_envs", type=int, default=4, help="Number of environments to spawn.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli = parser.parse_args()
-
-# run in headless mode in this test script
-args_cli.headless = True
 
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
@@ -41,6 +38,9 @@ def main():
     env_cfg.scene.num_envs = args_cli.num_envs
     env_cfg.sim.device = args_cli.device
     env_cfg.sim.dt = 0.01  # Set simulation time step
+    
+    env_cfg.scene.robot.spawn.articulation_props.fix_root_link = True # type: ignore
+    
     env = AmpEnv(cfg=env_cfg)   # motion loader is initialized inside AmpEnv
     robot:Articulation = env.scene["robot"]
     env_origins = env.scene.env_origins
@@ -58,10 +58,28 @@ def main():
         end_time = time.time()
         duration = end_time - start_time
         print(f"Minibatch {count} loading time: {duration}")
-        
         start_time = time.time()
         
+        # dof_pos = mini_batch[:env.num_envs, 10:10+27]
+        # robot.write_joint_position_to_sim(dof_pos)
+        
+        # base_lin_vel_b = mini_batch[:env.num_envs, 0:3]
+        # base_ang_vel_b = mini_batch[:env.num_envs, 3:6]
+        # projected_gravity = mini_batch[:env.num_envs, 6:9]
+        # base_pos_z = mini_batch[:env.num_envs, 9:10]
+        
+        # print(f"Minibatch {count} data:")
+        # print("Base linear velocity (body frame):", base_lin_vel_b)
+        # print("Base angular velocity (body frame):", base_ang_vel_b)
+        # print("Projected gravity:", projected_gravity)
+        # print("Base position z:", base_pos_z)
+        
+        # # only render, no physics step
+        # env.sim.render()
+        
         count += 1
+        
+    env.close()
             
 
 if __name__ == "__main__":

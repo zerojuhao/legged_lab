@@ -110,11 +110,12 @@ def main():
             # only render, no physics step
             env.sim.render()
             
-            if count % 50 == 0:
-                print("-" * 80)
-                print(f"key_links_pos_b: {key_links_pos_b[0, :, :]}")
-                print(f"root velocity in body frame: {root_vel_b[0, :]}")
-                print(f"root angular velocity in body frame: {root_ang_vel_b[0, :]}")
+            if count % 20 == 0:
+                # print("-" * 80)
+                # print(f"key_links_pos_b: {key_links_pos_b[0, :, :]}")
+                # print(f"root velocity in body frame: {root_vel_b[0, :]}")
+                # print(f"root angular velocity in body frame: {root_ang_vel_b[0, :]}")
+                print(count)
 
             count += 1
             sim_time += sim_dt

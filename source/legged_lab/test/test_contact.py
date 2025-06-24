@@ -17,7 +17,6 @@ simulation_app = app_launcher.app
 
 import torch
 
-import isaacsim.util.debug_draw._debug_draw as omni_debug_draw
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.assets import Articulation
 from isaaclab.sensors import FrameTransformer, FrameTransformerCfg, OffsetCfg, ContactSensor
@@ -26,25 +25,25 @@ from isaaclab.managers import SceneEntityCfg
 
 from legged_lab.tasks.locomotion.amp.config.g1.amp_flat_env_cfg import G1AmpFlatEnvCfg
 from legged_lab.tasks.locomotion.amp.amp_env import AmpEnv
-
+from legged_lab.assets.unitree import G1_29DOF_LOCK_WAIST_CFG
  
 def main():
     env_cfg = G1AmpFlatEnvCfg()
+    env_cfg.scene.robot = G1_29DOF_LOCK_WAIST_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    env_cfg.scene.robot.spawn.articulation_props.enabled_self_collisions = True # type:ignore
+    env_cfg.scene.robot.spawn.articulation_props.fix_root_link = True # type:ignore
+    env_cfg.actions.joint_pos.use_default_offset = False
+    env_cfg.actions.joint_pos.scale = 1.0
     
     env_cfg.scene.num_envs = args_cli.num_envs
     env_cfg.sim.device = args_cli.device
     
     env_cfg.scene.contact_forces.debug_vis = True
-    
-    env_cfg.scene.robot.spawn.articulation_props.enabled_self_collisions = True
-    
+
     env = AmpEnv(cfg=env_cfg)
-    
+
     sensor_cfg = SceneEntityCfg("contact_forces", body_names=[
-        ".*_palm_link",
-        ".*_one_link", 
-        ".*_two_link", 
-        ".*_hip_.*_link",
+        ".*_wrist_pitch_link",
     ])
     sensor_cfg.resolve(env.scene)
     print(sensor_cfg.body_names)
@@ -52,8 +51,13 @@ def main():
     contact_sensor = env.scene.sensors[sensor_cfg.name]
     
     lab_joint_names = env.scene["robot"].joint_names
-    right_shoulder_roll_id = lab_joint_names.index("right_shoulder_roll_joint")
-    right_elbow_pitch_id = lab_joint_names.index("right_elbow_pitch_joint")
+    modified_joint = {
+        "left_shoulder_roll_joint": 0.0 ,
+        "left_elbow_joint": 1.42,
+    }
+    modified_joint_ids = [
+        lab_joint_names.index(name) for name in modified_joint.keys()
+    ]
 
     count = 0
     obs, _ = env.reset()
@@ -64,8 +68,8 @@ def main():
             robot:Articulation = env.scene["robot"]
             action = robot.data.default_joint_pos.clone()
 
-            action[:,right_shoulder_roll_id] = 0.5
-            action[:,right_elbow_pitch_id] = -0.5
+            for joint_id, joint_value in zip(modified_joint_ids, modified_joint.values()):
+                action[:, joint_id] = joint_value
             
             obs, _, _, _, _ = env.step(action)
             
