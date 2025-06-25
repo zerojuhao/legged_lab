@@ -143,10 +143,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
     # create runner from rsl-rl
-    if agent_cfg.policy.class_name == "ActorCriticConv2d":
-        from rsl_rl.runners import OnPolicyRunnerConv2d
-        runner = OnPolicyRunnerConv2d(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
-    elif agent_cfg.algorithm.class_name == "PPOAmp":
+    if agent_cfg.algorithm.class_name == "PPOAmp":
         from rsl_rl.runners import OnPolicyRunnerAMP
         runner = OnPolicyRunnerAMP(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     else:

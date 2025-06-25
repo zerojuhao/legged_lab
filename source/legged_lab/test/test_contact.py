@@ -35,6 +35,10 @@ def main():
     env_cfg.actions.joint_pos.use_default_offset = False
     env_cfg.actions.joint_pos.scale = 1.0
     
+    env_cfg.motion_loader.motion_weights = {
+        "08_09_poses": 1.0,
+    }
+    
     env_cfg.scene.num_envs = args_cli.num_envs
     env_cfg.sim.device = args_cli.device
     
@@ -43,7 +47,7 @@ def main():
     env = AmpEnv(cfg=env_cfg)
 
     sensor_cfg = SceneEntityCfg("contact_forces", body_names=[
-        ".*_wrist_pitch_link",
+        ".*_wrist_yaw_link",
     ])
     sensor_cfg.resolve(env.scene)
     print(sensor_cfg.body_names)
@@ -52,8 +56,8 @@ def main():
     
     lab_joint_names = env.scene["robot"].joint_names
     modified_joint = {
-        "left_shoulder_roll_joint": 0.0 ,
-        "left_elbow_joint": 1.42,
+        "left_shoulder_roll_joint": -0.12,
+        "left_elbow_joint": 1.3,
     }
     modified_joint_ids = [
         lab_joint_names.index(name) for name in modified_joint.keys()

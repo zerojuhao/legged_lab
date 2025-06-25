@@ -23,7 +23,7 @@ https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
 
 - [ ] Add more details about motion retargeting
 - [ ] Add more legged robots, such as Unitree H1
-- [ ] Self-contact penalty in AMP
+- [x] Self-contact penalty in AMP
 - [x] Asymmetric Actor-Critic in AMP
 - [ ] Sim2sim in mujoco
 

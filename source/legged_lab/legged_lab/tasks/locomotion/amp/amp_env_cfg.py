@@ -22,11 +22,16 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 import legged_lab.tasks.locomotion.amp.mdp as mdp
 
 from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import (
+    ScandotsSceneCfg,
     ObservationsCfg,
     EventCfg,
     LocomotionVelocityRoughEnvCfg,
 )
 
+
+@configclass
+class AmpSceneCfg(ScandotsSceneCfg):
+    pass
 
 @configclass
 class AmpObservationsCfg():
@@ -74,6 +79,20 @@ class AmpObservationsCfg():
             self.concatenate_terms = True
     
     critic: CriticCfg = CriticCfg()
+    
+    @configclass
+    class HeightScanCfg(ObsGroup):
+        height_scan = ObsTerm(
+            func=mdp.height_scan_ch,
+            params={"sensor_cfg": SceneEntityCfg("height_scanner")},
+            noise=Unoise(n_min=-0.1, n_max=0.1),
+            clip=(-1.0, 1.0),
+        )
+        
+        def __post_init__(self):
+            self.enable_corruption = True
+    
+    image: HeightScanCfg = HeightScanCfg()
         
     @configclass
     class AmpCfg(ObsGroup):        
@@ -143,20 +162,21 @@ class LocomotionAmpEnvCfg(LocomotionVelocityRoughEnvCfg):
     """
     Environment configuration for the AMP locomotion task.
     """
+    scene: AmpSceneCfg = AmpSceneCfg(num_envs=4096, env_spacing=2.5)
     observations: AmpObservationsCfg = AmpObservationsCfg()
     events: AmpEventCfg = AmpEventCfg()
     motion_loader: MotionLoaderCfg = MotionLoaderCfg()
     
     def __post_init__(self):
         
-        # plane terrain
-        self.scene.terrain.terrain_type = "plane"
-        self.scene.terrain.terrain_generator = None
-        # no height scan
-        self.scene.height_scanner = None
-        self.observations.policy.height_scan = None
-        # no terrain curriculum
-        self.curriculum.terrain_levels = None
+        # # plane terrain
+        # self.scene.terrain.terrain_type = "plane"
+        # self.scene.terrain.terrain_generator = None
+        # # no height scan
+        # self.scene.height_scanner = None
+        # self.observations.policy.height_scan = None
+        # # no terrain curriculum
+        # self.curriculum.terrain_levels = None
         
         super().__post_init__()
         
