@@ -147,6 +147,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Observations
         # ------------------------------------------------------
+        # self.observations.policy.base_lin_vel = None
         self.observations.amp.key_links_pos_b.params["local_pos_dict"] = {
             "left_ankle_roll_link": (0.0, 0.0, 0.0),
             "right_ankle_roll_link": (0.0, 0.0, 0.0),
@@ -191,7 +192,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         self.rewards.joint_deviation_wrists.weight = -0.0
         self.rewards.joint_deviation_waist.weight = -0.0
         
-        self.rewards.undesired_contacts.weight = 0.0
+        self.rewards.undesired_contacts.weight = -0.1
         
         
         # ------------------------------------------------------

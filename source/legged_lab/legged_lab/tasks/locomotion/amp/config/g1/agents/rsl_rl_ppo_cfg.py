@@ -38,7 +38,7 @@ class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
         entropy_coef=0.01,
         num_learning_epochs=5,
         num_mini_batches=4,
-        learning_rate=5.0e-4,
+        learning_rate=1.0e-4,
         schedule="adaptive",
         gamma=0.99,
         lam=0.95,
@@ -54,7 +54,7 @@ class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
             amp_discriminator=RslRlAmpCfg.AMPDiscriminatorCfg(
                 hidden_dims=[1024, 512],
                 activation="elu",
-                amp_reward_scale=4.0,
+                amp_reward_scale=2.0,
                 task_reward_lerp=0.3
             )
         )

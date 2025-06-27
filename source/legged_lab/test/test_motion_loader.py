@@ -4,7 +4,7 @@ from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Tutorial on running the cartpole RL environment.")
-parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to spawn.")
+parser.add_argument("--num_envs", type=int, default=4, help="Number of environments to spawn.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -110,12 +110,12 @@ def main():
             # only render, no physics step
             env.sim.render()
             
-            if count % 20 == 0:
-                # print("-" * 80)
-                # print(f"key_links_pos_b: {key_links_pos_b[0, :, :]}")
-                # print(f"root velocity in body frame: {root_vel_b[0, :]}")
-                # print(f"root angular velocity in body frame: {root_ang_vel_b[0, :]}")
-                print(count)
+            # if count % 20 == 0:
+            #     print("-" * 80)
+            #     print(f"key_links_pos_b: {key_links_pos_b[0, :, :]}")
+            #     print(f"root velocity in body frame: {root_vel_b[0, :]}")
+            #     print(f"root angular velocity in body frame: {root_ang_vel_b[0, :]}")
+            #     print(count)
 
             count += 1
             sim_time += sim_dt
