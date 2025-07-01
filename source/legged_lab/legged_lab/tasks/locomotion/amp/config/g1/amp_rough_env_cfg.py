@@ -108,10 +108,10 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         self.scene.robot = G1_29DOF_LOCK_WAIST_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         # terrain
-        self.scene.terrain.terrain_type = "plane"   # TODO
-        self.scene.terrain.terrain_generator = None # TODO
+        # self.scene.terrain.terrain_type = "plane"   # TODO
+        # self.scene.terrain.terrain_generator = None # TODO
         # height scanner
-        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/waist_yaw_link" # TODO: check
+        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/pelvis"
         
         # ------------------------------------------------------
         # motion loader
@@ -167,7 +167,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Curriculum
         # ------------------------------------------------------
-        self.curriculum.terrain_levels = None   # TODO
+        # self.curriculum.terrain_levels = None   # TODO
         
         # ------------------------------------------------------
         # Events

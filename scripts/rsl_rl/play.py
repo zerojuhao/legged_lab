@@ -113,11 +113,7 @@ def main():
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
-    if agent_cfg.policy.class_name == "ActorCriticConv2d":
-        from rsl_rl.runners import OnPolicyRunnerConv2d
-        ppo_runner = OnPolicyRunnerConv2d(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-        ppo_runner.load(resume_path)    # TODO
-    elif agent_cfg.algorithm.class_name == "PPOAmp":
+    if agent_cfg.algorithm.class_name == "PPOAmp":
         from rsl_rl.runners import OnPolicyRunnerAMP
         ppo_runner = OnPolicyRunnerAMP(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
         ppo_runner.load(resume_path, map_location=agent_cfg.device)
@@ -140,16 +136,16 @@ def main():
     # export policy to onnx/jit
     export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
     export_policy_as_jit(policy_nn, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt")
-    export_policy_as_onnx(
-        policy_nn, normalizer=ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.onnx"
-    )
+    # export_policy_as_onnx(
+    #     policy_nn, normalizer=ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.onnx"
+    # ) # TODO
 
     dt = env.unwrapped.step_dt
 
     # reset environment
     obs, extras = env.get_observations()
-    if "sensor" in extras["observations"]:
-        image_obs = extras["observations"]["sensor"].permute(0, 3, 1, 2).flatten(start_dim=1)
+    if "image" in extras["observations"]:
+        image_obs = extras["observations"]["image"].permute(0, 3, 1, 2).flatten(start_dim=1)
         obs = torch.cat([obs, image_obs], dim=1)
     timestep = 0
     # simulate environment
@@ -161,8 +157,8 @@ def main():
             actions = policy(obs)
             # env stepping
             obs, _, _, infos = env.step(actions)
-            if "sensor" in infos["observations"]:
-                image_obs = infos["observations"]["sensor"].permute(0, 3, 1, 2).flatten(start_dim=1)
+            if "image" in infos["observations"]:
+                image_obs = infos["observations"]["image"].permute(0, 3, 1, 2).flatten(start_dim=1)
                 obs = torch.cat([obs, image_obs], dim=1)
         if args_cli.video:
             timestep += 1
