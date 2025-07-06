@@ -129,6 +129,9 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         }
         self.motion_loader.motion_weights = {
             # the motion names can be obtained by running `utils/print_motion_names.py`
+            "36_08_poses": 1.0,     # stairs
+            "36_26_poses": 1.0,     # stairs
+            "36_32_poses": 1.0,     # stairs
             # "20_05_poses": 1.0,      # walk with arm
             # "22_25_poses": 1.0,      # slow walk
             # "10_04_poses": 1.0,      # walk from stand
@@ -232,5 +235,7 @@ class G1AmpRoughEnvCfg_PLAY(G1AmpRoughEnvCfg):
         # remove random pushing
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+        
+        self.scene.height_scanner.debug_vis = True
 
 

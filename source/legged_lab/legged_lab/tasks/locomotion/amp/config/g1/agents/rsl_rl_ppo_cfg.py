@@ -49,13 +49,13 @@ class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
             grad_penalty_scale=10.0,
             amp_trunk_weight_decay=1.0e-4,
             amp_linear_weight_decay=1.0e-2,
-            amp_learning_rate=2.0e-5,
+            amp_learning_rate=1.0e-4,
             amp_max_grad_norm=1.0,
             amp_discriminator=RslRlAmpCfg.AMPDiscriminatorCfg(
                 hidden_dims=[1024, 512],
                 activation="elu",
                 amp_reward_scale=2.0,
-                task_reward_lerp=0.3
+                task_reward_lerp=0.1
             )
         )
     )
