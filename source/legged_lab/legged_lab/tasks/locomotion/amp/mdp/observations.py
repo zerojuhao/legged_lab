@@ -49,7 +49,11 @@ def key_links_pos_b(env: ManagerBasedEnv,
     # get the positions of the key links in world frame
     parent_pos_w = asset.data.body_pos_w[:, indices, :] # shape: (num_instances, M, 3)
     parent_quat = asset.data.body_quat_w[:, indices, :] # shape: (num_instances, M, 4)
-    key_links_pos_w = parent_pos_w + math_utils.quat_rotate(parent_quat, local_pos)
+    key_links_pos_w = parent_pos_w + math_utils.quat_apply(parent_quat, local_pos)
     # get the positions of the key links in base frame
-    key_links_pos_b = math_utils.quat_rotate_inverse(base_quat_w.unsqueeze(1), key_links_pos_w - base_pos_w.unsqueeze(1))
+    # expand base_quat_w and base_pos_w to match key_links_pos_w dimensions
+    num_key_links = key_links_pos_w.shape[1]
+    base_quat_w_expanded = base_quat_w.unsqueeze(1).expand(-1, num_key_links, -1)  # shape: (num_instances, M, 4)
+    base_pos_w_expanded = base_pos_w.unsqueeze(1).expand(-1, num_key_links, -1)    # shape: (num_instances, M, 3)
+    key_links_pos_b = math_utils.quat_apply_inverse(base_quat_w_expanded, key_links_pos_w - base_pos_w_expanded)
     return key_links_pos_b.reshape(base_pos_w.shape[0], -1)

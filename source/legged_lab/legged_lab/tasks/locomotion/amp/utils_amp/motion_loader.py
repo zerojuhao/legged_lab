@@ -56,7 +56,7 @@ def ang_vel_from_quat_diff(quat: torch.Tensor, dt: float, in_frame:str = "body")
         diff_quat = math_utils.quat_mul(math_utils.quat_conjugate(q1), q2)
         diff_angle_axis = math_utils.axis_angle_from_quat(diff_quat)
         if in_frame == "world":
-            diff_angle_axis = math_utils.quat_rotate(q1, diff_angle_axis)
+            diff_angle_axis = math_utils.quat_apply(q1, diff_angle_axis)
         ang_vel[i, :] = diff_angle_axis.squeeze() / dt  # convert to angular velocity
 
     ang_vel[-1, :] = ang_vel[-2, :]  # use the last value as the same as the second last value
@@ -248,7 +248,7 @@ class MotionLoader:
         root_vel_w = vel_forward_diff(root_pos_w, dt)
         
         # # root velocity in body frame
-        # root_vel_b = math_utils.quat_rotate_inverse(root_quat, root_vel_w)
+        # root_vel_b = math_utils.quat_apply_inverse(root_quat, root_vel_w)
         
         # root angular velocity in world frame, shape (num_frames, 3)
         root_ang_vel_w = ang_vel_from_quat_diff(root_quat, dt, in_frame="world")
@@ -445,13 +445,15 @@ class MotionLoader:
         blend = blend.unsqueeze(-1)  # make it (n, 1) for broadcasting
         root_pos_w = linear_interpolate(self.root_pos_w_0, self.root_pos_w_1, blend)
         root_vel_w = linear_interpolate(self.root_vel_w_0, self.root_vel_w_1, blend)
-        root_vel_b = math_utils.quat_rotate_inverse(root_quat, root_vel_w)
+        root_vel_b = math_utils.quat_apply_inverse(root_quat, root_vel_w)
         root_ang_vel_w = linear_interpolate(self.root_ang_vel_w_0, self.root_ang_vel_w_1, blend)
-        root_ang_vel_b = math_utils.quat_rotate_inverse(root_quat, root_ang_vel_w)
+        root_ang_vel_b = math_utils.quat_apply_inverse(root_quat, root_ang_vel_w)
         dof_pos = linear_interpolate(self.dof_pos_0, self.dof_pos_1, blend)
         dof_vel = linear_interpolate(self.dof_vel_0, self.dof_vel_1, blend)
         key_links_pos_w = linear_interpolate(self.key_links_pos_w_0, self.key_links_pos_w_1, blend.unsqueeze(1))
-        key_links_pos_b = math_utils.quat_rotate_inverse(root_quat.unsqueeze(1), key_links_pos_w - root_pos_w.unsqueeze(1))
+        num_key_links = key_links_pos_w.shape[1]
+        key_links_pos_b = math_utils.quat_apply_inverse(root_quat.unsqueeze(1).expand(-1, num_key_links, -1), 
+                                                         key_links_pos_w - root_pos_w.unsqueeze(1).expand(-1, num_key_links, -1))
         
         return {
             "root_pos_w": root_pos_w,
@@ -552,5 +554,5 @@ class MotionLoader:
         gravity_vec_w = torch.tensor([0.0, 0.0, -1.0], dtype=torch.float32, device=self.device).unsqueeze(0)  # (1, 3)
         root_quat = motion_state["root_quat"]  # (N, 4)
         gravity_vec_w = gravity_vec_w.expand(root_quat.shape[0], -1)  # (N, 3)
-        projected_gravity = math_utils.quat_rotate_inverse(root_quat, gravity_vec_w)
+        projected_gravity = math_utils.quat_apply_inverse(root_quat, gravity_vec_w)
         return projected_gravity

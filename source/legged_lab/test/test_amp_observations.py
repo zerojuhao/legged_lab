@@ -69,10 +69,10 @@ def main():
             # key_links_pos_b = key_links_pos_b_his[:, 1, :, :]   # shape: (N, M, 3), only use the latest key links positions
             
             key_links_pos_b = amp_obs[:, 27+27:27+27+4*3].reshape(args_cli.num_envs, -1, 3)  # shape: (N, M, 3), N is number of envs, M is number of key links
-            
+            num_key_links = key_links_pos_b.shape[1]
             root_pos_w = robot.data.root_pos_w.unsqueeze(1) # shape: (N, 1, 3)
             root_quat_w = robot.data.root_quat_w.unsqueeze(1)  # shape: (N, 1, 4)
-            key_links_pos_w = root_pos_w + math_utils.quat_rotate(root_quat_w, key_links_pos_b)
+            key_links_pos_w = root_pos_w + math_utils.quat_apply(root_quat_w.expand(-1, num_key_links, -1), key_links_pos_b)
             
             draw_interface.clear_lines()
             lines_color = [[1.0, 1.0, 0.0, 1.0]] * env.scene.num_envs

@@ -90,7 +90,9 @@ def main():
             root_ang_vel_b = motion_data["root_ang_vel_b"]
             
             key_links_pos_b = motion_data["key_links_pos_b"]    # shape: (N, M, 3), N is number of envs, M is number of key links
-            key_links_pos_w = root_pos.unsqueeze(1) + math_utils.quat_rotate(root_quat.unsqueeze(1), key_links_pos_b)
+            num_key_links = key_links_pos_b.shape[1]
+            key_links_pos_w = root_pos.unsqueeze(1) + math_utils.quat_apply(root_quat.unsqueeze(1).expand(-1, num_key_links, -1), 
+                                                                            key_links_pos_b)
             key_links_pos_w += env_origins.unsqueeze(1)  # add environment origins
             
             marker_vis.visualize(
