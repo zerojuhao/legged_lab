@@ -8,6 +8,8 @@ import legged_lab.tasks.locomotion.velocity.mdp as mdp
 from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import RewardsCfg, MySceneCfg, ScandotsSceneCfg
 from legged_lab.tasks.locomotion.amp.amp_env_cfg import LocomotionAmpEnvCfg
 
+import isaaclab.terrains as terrain_gen
+
 ##
 # Pre-defined configs
 ##
@@ -107,11 +109,47 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # Scene
         # ------------------------------------------------------
         self.scene.robot = G1_29DOF_LOCK_WAIST_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        # terrain
-        # self.scene.terrain.terrain_type = "plane"   # TODO
-        # self.scene.terrain.terrain_generator = None # TODO
         # height scanner
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/pelvis"
+        # terrain
+        self.scene.terrain.terrain_generator.sub_terrains = {   # type: ignore
+            "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
+                proportion=0.2,
+                step_height_range=(0.05, 0.23),
+                step_width=0.3,
+                platform_width=3.0,
+                border_width=1.0,
+                holes=False,
+            ),
+            "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
+                proportion=0.2,
+                step_height_range=(0.05, 0.23),
+                step_width=0.3,
+                platform_width=3.0,
+                border_width=1.0,
+                holes=False,
+            ),
+            "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
+                proportion=0.2, noise_range=(0.02, 0.10), noise_step=0.02, border_width=0.25
+            ),
+            "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
+                proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
+            ),
+            "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
+                proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
+            ),
+            "hf_stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(
+                proportion=0.2,
+                stone_height_max=0.0,
+                stone_width_range=(0.4, 1.0),
+                stone_distance_range=(0.1, 0.3),
+                holes_depth=-5.0,
+                platform_width=2.0,
+                border_width=0.25,
+            ),
+        }
+        self.scene.terrain.terrain_generator.curriculum = True  # type: ignore
+        # make sure the curriculum is enabled
         
         # ------------------------------------------------------
         # motion loader
@@ -129,9 +167,9 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         }
         self.motion_loader.motion_weights = {
             # the motion names can be obtained by running `utils/print_motion_names.py`
-            "36_08_poses": 1.0,     # stairs
-            "36_26_poses": 1.0,     # stairs
-            "36_32_poses": 1.0,     # stairs
+            # "36_08_poses": 1.0,     # stairs
+            # "36_26_poses": 1.0,     # stairs
+            # "36_32_poses": 1.0,     # stairs
             # "20_05_poses": 1.0,      # walk with arm
             # "22_25_poses": 1.0,      # slow walk
             # "10_04_poses": 1.0,      # walk from stand
@@ -178,6 +216,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         self.events.push_robot = None       # TODO
         self.events.add_base_mass = None    # TODO
         self.events.base_external_force_torque.params["asset_cfg"].body_names = ["waist_yaw_link"]
+        self.events.reset_base_rsi.params["pos_rsi"] = False    # no offset in x and y for the root position during RSI
 
         # ------------------------------------------------------
         # Rewards
@@ -211,7 +250,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # terminations
         # ------------------------------------------------------
         self.terminations.base_contact.params["sensor_cfg"].body_names = [
-            "waist_yaw_link", "pelvis", ".*_shoulder_.*_link", ".*_elbow_link"
+            "waist_yaw_link", "pelvis", ".*_shoulder_.*_link", ".*_elbow_link", ".*_knee_link",
         ]
         
 

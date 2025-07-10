@@ -30,6 +30,7 @@ def ref_state_init_root(
     env: AmpEnv, 
     env_ids: torch.Tensor,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    pos_rsi: bool = True,
 ):
     """Reference State Initialization (RSI) for the root of the robot.
     Sample from the motion loader and set the root position and orientation.
@@ -53,6 +54,8 @@ def ref_state_init_root(
     # lift the root position a little bit to avoid collision with the ground
     motion_state_dict["root_pos_w"][:, 2] += lift_a_little
     
+    if not pos_rsi:
+        motion_state_dict["root_pos_w"][:, :2] = 0.0    # no offset in x and y
     ref_root_pos_w = motion_state_dict["root_pos_w"] + env.scene.env_origins[env_ids]
     ref_root_quat = motion_state_dict["root_quat"]
     ref_root_vel_w = motion_state_dict["root_vel_w"]
