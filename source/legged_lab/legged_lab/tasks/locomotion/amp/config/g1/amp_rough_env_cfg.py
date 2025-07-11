@@ -4,7 +4,7 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 
-import legged_lab.tasks.locomotion.velocity.mdp as mdp
+import legged_lab.tasks.locomotion.amp.mdp as mdp
 from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import RewardsCfg, MySceneCfg, ScandotsSceneCfg
 from legged_lab.tasks.locomotion.amp.amp_env_cfg import LocomotionAmpEnvCfg
 
@@ -94,6 +94,16 @@ class G1AmpRewards():
             ), 
             "threshold": 1.0
         },
+    )
+    feet_orientation_l2 = RewTerm(
+        func=mdp.feet_orientation_l2,
+        weight=-0.1,
+        params={
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces", 
+                body_names=".*_ankle_roll_link",
+            ),
+        }
     )
 
 
@@ -236,6 +246,8 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         
         self.rewards.undesired_contacts.weight = -0.1
         
+        self.rewards.feet_orientation_l2.weight = 0.0
+        
         
         # ------------------------------------------------------
         # Commands
@@ -250,7 +262,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # terminations
         # ------------------------------------------------------
         self.terminations.base_contact.params["sensor_cfg"].body_names = [
-            "waist_yaw_link", "pelvis", ".*_shoulder_.*_link", ".*_elbow_link", ".*_knee_link",
+            "waist_yaw_link", "pelvis", ".*_shoulder_.*_link", ".*_elbow_link",
         ]
         
 

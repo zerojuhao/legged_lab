@@ -327,6 +327,12 @@ class TerminationsCfg:
         func=mdp.illegal_contact,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), "threshold": 1.0},
     )
+    bad_orientation = DoneTerm(
+        func=mdp.bad_orientation, 
+        params={
+            "limit_angle": math.radians(45.0),
+        },
+    )
 
 
 @configclass

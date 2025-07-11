@@ -59,6 +59,8 @@ class G1AmpFlatEnvCfg(G1AmpRoughEnvCfg):
         
         self.rewards.undesired_contacts.weight = 0.0
         
+        self.rewards.feet_orientation_l2.weight = -1.0
+        
         # ------------------------------------------------------
         # Commands
         # ------------------------------------------------------
