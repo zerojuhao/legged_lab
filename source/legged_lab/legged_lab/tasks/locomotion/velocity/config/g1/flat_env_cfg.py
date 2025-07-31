@@ -20,26 +20,63 @@ class G1FlatEnvCfg(G1RoughEnvCfg):
         self.scene.terrain.terrain_generator = None
         # no height scan
         self.scene.height_scanner = None
-        self.observations.policy.height_scan = None
         # no terrain curriculum
         self.curriculum.terrain_levels = None
-
+        
+        # ------------------------------------------------------
+        # Observations
+        # ------------------------------------------------------
+        self.observations.policy.base_ang_vel.scale = 0.2
+        self.observations.policy.joint_vel.scale = 0.05
+        # no height scan
+        self.observations.policy.height_scan = None
+        
+        self.observations.critic.base_ang_vel.scale = 0.2
+        self.observations.critic.joint_vel.scale = 0.05
+        # no height scan
+        self.observations.critic.height_scan = None
+        
+        # ------------------------------------------------------
         # Rewards
-        self.rewards.track_ang_vel_z_exp.weight = 1.0
-        self.rewards.lin_vel_z_l2.weight = -0.2
-        self.rewards.action_rate_l2.weight = -0.005
-        self.rewards.dof_acc_l2.weight = -1.0e-7
-        self.rewards.feet_air_time.weight = 0.75
-        self.rewards.feet_air_time.params["threshold"] = 0.4
-        self.rewards.dof_torques_l2.weight = -2.0e-6
-        self.rewards.dof_torques_l2.params["asset_cfg"] = SceneEntityCfg(
-            "robot", joint_names=[".*_hip_.*", ".*_knee_joint"]
-        )
-        # Commands
-        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.0)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
+        # ------------------------------------------------------
+        # task
+        self.rewards.track_lin_vel_xy_exp.weight = 1.0
+        self.rewards.track_ang_vel_z_exp.weight = 0.5
+        
+        self.rewards.alive.weight = 0.15
+        
+        # base
+        self.rewards.lin_vel_z_l2.weight = -2.0
+        self.rewards.ang_vel_xy_l2.weight = -0.05
+        self.rewards.flat_orientation_l2.weight = -5.0
+        self.rewards.base_height.weight = -10.0
+        self.rewards.base_height.params["target_height"] = 0.78
+        self.rewards.base_height.params["sensor_cfg"] = None  # no height scanner
+        
+        # joint
+        self.rewards.dof_vel_l2.weight = -0.001
+        self.rewards.dof_acc_l2.weight = -2.5e-7
+        self.rewards.action_rate_l2.weight = -0.05
+        self.rewards.dof_pos_limits.weight = -5.0
+        self.rewards.dof_energy.weight = -2e-5
+        
+        # feet
+        self.rewards.feet_air_time = None
+        self.rewards.feet_slide.weight = -0.2
+        self.rewards.feet_clearance.weight = 1.0
+        self.rewards.feet_clearance.params["target_feet_height"] = 0.15
+        
+        # deviation
+        self.rewards.joint_deviation_hip.weight = -1.0
+        self.rewards.joint_deviation_arms.weight = -0.2
+        self.rewards.joint_deviation_waist.weight = -1.0
 
+        self.rewards.undesired_contacts.weight = -1.0
+        self.rewards.undesired_contacts.params["threshold"] = 1.0
+        self.rewards.undesired_contacts.params["sensor_cfg"] = SceneEntityCfg(
+            "contact_forces",
+            body_names=["(?!.*ankle.*).*"],  # exclude ankle links
+        )
 
 class G1FlatEnvCfg_PLAY(G1FlatEnvCfg):
     def __post_init__(self) -> None:
@@ -54,3 +91,7 @@ class G1FlatEnvCfg_PLAY(G1FlatEnvCfg):
         # remove random pushing
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+        
+        self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 1.0)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
