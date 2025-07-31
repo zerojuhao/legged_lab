@@ -35,9 +35,7 @@ from isaaclab.assets import Articulation
 # Pre-defined configs
 ##
 if args_cli.robot == "g1":
-    from isaaclab_assets import G1_MINIMAL_CFG as ROBOT_CFG  # isort: skip
-elif args_cli.robot == "h1":
-    from isaaclab_assets import H1_MINIMAL_CFG as ROBOT_CFG
+    from legged_lab.assets.unitree import G1_29DOF_LOCK_WAIST_CFG as ROBOT_CFG  # isort: skip
 else:
     raise ValueError(f"Robot {args_cli.robot} not supported.")
 
@@ -71,7 +69,9 @@ if __name__ == "__main__":
     
     lab_joint_names = robot.joint_names
     print("Legged Lab joint names:")
-    print(lab_joint_names)
+    # print(lab_joint_names)
+    for jnt in lab_joint_names:
+        print("-", jnt)
 
     body_names = robot.body_names
     print("Legged Lab body names:")
