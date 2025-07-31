@@ -123,36 +123,39 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/pelvis"
         # terrain
         self.scene.terrain.terrain_generator.sub_terrains = {   # type: ignore
-            "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
-                proportion=0.2,
-                step_height_range=(0.05, 0.23),
-                step_width=0.3,
-                platform_width=3.0,
-                border_width=1.0,
-                holes=False,
+            "plane": terrain_gen.MeshPlaneTerrainCfg(
+                proportion=0.4,
             ),
-            "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
-                proportion=0.2,
-                step_height_range=(0.05, 0.23),
-                step_width=0.3,
-                platform_width=3.0,
-                border_width=1.0,
-                holes=False,
-            ),
-            "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-                proportion=0.2, noise_range=(0.02, 0.10), noise_step=0.02, border_width=0.25
-            ),
-            "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
-                proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
-            ),
-            "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
-                proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
-            ),
+            # "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
+            #     proportion=0.2,
+            #     step_height_range=(0.05, 0.23),
+            #     step_width=0.3,
+            #     platform_width=3.0,
+            #     border_width=1.0,
+            #     holes=False,
+            # ),
+            # "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
+            #     proportion=0.2,
+            #     step_height_range=(0.05, 0.23),
+            #     step_width=0.3,
+            #     platform_width=3.0,
+            #     border_width=1.0,
+            #     holes=False,
+            # ),
+            # "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
+            #     proportion=0.2, noise_range=(0.02, 0.10), noise_step=0.02, border_width=0.25
+            # ),
+            # "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
+            #     proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
+            # ),
+            # "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
+            #     proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
+            # ),
             "hf_stepping_stones": terrain_gen.HfSteppingStonesTerrainCfg(
-                proportion=0.2,
+                proportion=0.6,
                 stone_height_max=0.0,
                 stone_width_range=(0.4, 1.0),
-                stone_distance_range=(0.1, 0.3),
+                stone_distance_range=(0.0, 0.3),
                 holes_depth=-5.0,
                 platform_width=2.0,
                 border_width=0.25,
@@ -246,7 +249,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         
         self.rewards.undesired_contacts.weight = -0.1
         
-        self.rewards.feet_orientation_l2.weight = 0.0
+        self.rewards.feet_orientation_l2.weight = -0.5
         
         
         # ------------------------------------------------------
@@ -256,7 +259,12 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
         self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
         self.commands.base_velocity.ranges.heading = (-math.pi, math.pi)
-
+        
+        # ------------------------------------------------------
+        # Curriculum
+        # ------------------------------------------------------
+        self.curriculum.lin_vel_cmd_levels = None
+        self.curriculum.ang_vel_cmd_levels = None
         
         # ------------------------------------------------------
         # terminations
