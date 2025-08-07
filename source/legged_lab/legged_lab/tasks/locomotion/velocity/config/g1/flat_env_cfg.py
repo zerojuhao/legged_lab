@@ -64,11 +64,12 @@ class G1FlatEnvCfg(G1RoughEnvCfg):
         self.rewards.feet_air_time = None
         self.rewards.feet_slide.weight = -0.2
         self.rewards.feet_clearance.weight = 1.0
-        self.rewards.feet_clearance.params["target_feet_height"] = 0.15
+        # self.rewards.feet_clearance.params["target_feet_height"] = 0.15
+        self.rewards.feet_gait.weight = 0.5
         
         # deviation
         self.rewards.joint_deviation_hip.weight = -1.0
-        self.rewards.joint_deviation_arms.weight = -0.2
+        self.rewards.joint_deviation_arms.weight = -0.1
         self.rewards.joint_deviation_waist.weight = -1.0
 
         self.rewards.undesired_contacts.weight = -1.0
@@ -92,6 +93,6 @@ class G1FlatEnvCfg_PLAY(G1FlatEnvCfg):
         self.events.base_external_force_torque = None
         self.events.push_robot = None
         
-        self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 1.0)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 1.0)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.3, 0.3)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.2, 0.2)

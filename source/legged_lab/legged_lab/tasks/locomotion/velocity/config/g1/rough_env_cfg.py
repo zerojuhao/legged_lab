@@ -13,7 +13,7 @@ from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import LocomotionVelo
 ##
 # Pre-defined configs
 ##
-from legged_lab.assets.unitree import G1_29DOF_LOCK_WAIST_MINIMAL_CFG
+from legged_lab.assets.unitree import G1_29DOF_LOCK_WAIST_MINIMAL_CFG, G1_29DOF_LOCK_WAIST_CFG
 
 ['pelvis', 'left_hip_pitch_link', 'right_hip_pitch_link', 'waist_yaw_link', 'left_hip_roll_link', 'right_hip_roll_link', 'left_shoulder_pitch_link', 'right_shoulder_pitch_link', 'left_hip_yaw_link', 'right_hip_yaw_link', 'left_shoulder_roll_link', 'right_shoulder_roll_link', 'left_knee_link', 'right_knee_link', 'left_shoulder_yaw_link', 'right_shoulder_yaw_link', 'left_ankle_pitch_link', 'right_ankle_pitch_link', 'left_elbow_link', 'right_elbow_link', 'left_ankle_roll_link', 'right_ankle_roll_link', 'left_wrist_roll_link', 'right_wrist_roll_link', 'left_wrist_pitch_link', 'right_wrist_pitch_link', 'left_wrist_yaw_link', 'right_wrist_yaw_link']
 
@@ -95,16 +95,38 @@ class G1Rewards():
             "threshold": 0.4,
         },
     )
+    # feet_clearance = RewTerm(
+    #     func=mdp.feet_clearance_reward,
+    #     weight=1.0,
+    #     params={
+    #         "std": 0.05,
+    #         "tanh_mult": 2.0,
+    #         "base_height": 0.78,
+    #         "target_feet_height": 0.1,
+    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+    #     },
+    # )
     feet_clearance = RewTerm(
-        func=mdp.feet_clearance_reward,
+        func=mdp.foot_clearance_reward,
         weight=1.0,
         params={
             "std": 0.05,
             "tanh_mult": 2.0,
-            "base_height": 0.78,
-            "target_feet_height": 0.1,
+            "target_height": 0.1,
             "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
         },
+    )
+    
+    feet_gait = RewTerm(
+        func=mdp.feet_gait,
+        weight=0.5, 
+        params={
+            "period": 0.8,
+            "offset": [0.0, 0.5],
+            "threshold": 0.55,
+            "command_name": "base_velocity",
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+        }
     )
 
     # -- other
@@ -126,7 +148,7 @@ class G1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # post init of parent
         super().__post_init__()
         # Scene
-        self.scene.robot = G1_29DOF_LOCK_WAIST_MINIMAL_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.robot = G1_29DOF_LOCK_WAIST_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/waist_yaw_link"
 
         # Randomization
