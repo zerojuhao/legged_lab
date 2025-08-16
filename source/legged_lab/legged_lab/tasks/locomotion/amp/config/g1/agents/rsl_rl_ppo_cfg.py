@@ -10,7 +10,7 @@ from legged_lab import LEGGED_LAB_ROOT_DIR
 class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
     num_steps_per_env = 24
     max_iterations = 10000
-    save_interval = 100
+    save_interval = 200
     experiment_name = "g1_amp_rough"
     empirical_normalization = False
     policy = RslRlPpoActorCriticConv2dCfg(

@@ -15,7 +15,6 @@ from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import LocomotionVelo
 ##
 from legged_lab.assets.unitree import G1_29DOF_LOCK_WAIST_MINIMAL_CFG, G1_29DOF_LOCK_WAIST_CFG
 
-['pelvis', 'left_hip_pitch_link', 'right_hip_pitch_link', 'waist_yaw_link', 'left_hip_roll_link', 'right_hip_roll_link', 'left_shoulder_pitch_link', 'right_shoulder_pitch_link', 'left_hip_yaw_link', 'right_hip_yaw_link', 'left_shoulder_roll_link', 'right_shoulder_roll_link', 'left_knee_link', 'right_knee_link', 'left_shoulder_yaw_link', 'right_shoulder_yaw_link', 'left_ankle_pitch_link', 'right_ankle_pitch_link', 'left_elbow_link', 'right_elbow_link', 'left_ankle_roll_link', 'right_ankle_roll_link', 'left_wrist_roll_link', 'right_wrist_roll_link', 'left_wrist_pitch_link', 'right_wrist_pitch_link', 'left_wrist_yaw_link', 'right_wrist_yaw_link']
 
 @configclass
 class G1Rewards():

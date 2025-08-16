@@ -36,6 +36,8 @@ from isaaclab.assets import Articulation
 ##
 if args_cli.robot == "g1":
     from legged_lab.assets.unitree import G1_29DOF_LOCK_WAIST_CFG as ROBOT_CFG  # isort: skip
+elif args_cli.robot == "go2":
+    from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG as ROBOT_CFG  # isort: skip
 else:
     raise ValueError(f"Robot {args_cli.robot} not supported.")
 

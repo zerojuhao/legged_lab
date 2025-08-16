@@ -24,6 +24,7 @@ app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 import os
+import re
 from collections import OrderedDict
 import torch
 from isaaclab.assets import Articulation
@@ -93,8 +94,41 @@ def main():
         else:
             scale = 1.0
         
-        kp = robot.data.joint_stiffness[0, i].item() # TODO
-        kd = robot.data.joint_damping[0, i].item()
+        found = False
+        kp = 0.0
+        kd = 0.0
+        for key, value in env_cfg.scene.robot.actuators.items():
+            for expr in value.joint_names_expr:
+                if re.fullmatch(expr, jnt_name):
+                    found = True
+
+                    if isinstance(value.stiffness, float):
+                        kp = value.stiffness
+                    elif isinstance(value.stiffness, dict):
+                        for k, v in value.stiffness.items():
+                            if re.fullmatch(k, jnt_name):
+                                kp = v
+                                break
+                    else:
+                        raise ValueError(f"Unsupported stiffness type for joint {jnt_name}: {type(value.stiffness)}")
+                    
+                    if isinstance(value.damping, float):
+                        kd = value.damping
+                    elif isinstance(value.damping, dict):
+                        for k, v in value.damping.items():
+                            if re.fullmatch(k, jnt_name):
+                                kd = v
+                                break
+                    else:
+                        raise ValueError(f"Unsupported damping type for joint {jnt_name}: {type(value.damping)}")
+                    
+                    # found, so break the loop
+                    break
+            if found:
+                break
+        if not found:
+            raise ValueError(f"Joint {jnt_name} not found in Robot Cfg (ArticulationCfg)'s actuators.")
+        
         default_pos = robot.data.default_joint_pos[0, i].item()
         
         output_cfg["action_cfg"][jnt_name] = OrderedDict([
@@ -113,6 +147,7 @@ def main():
     
     print(f"Configuration exported to {output_file}")
     
+    env.close()
 
 
 
