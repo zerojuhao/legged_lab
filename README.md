@@ -20,6 +20,7 @@ This repository is an extension for legged robot reinforcement learning based on
 ## Demo
 
 * Adversarial Motion Priors for Unitree G1:
+
 https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
 
 ## News & Updates
