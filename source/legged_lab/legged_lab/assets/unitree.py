@@ -5,9 +5,9 @@ from isaaclab.assets.articulation import ArticulationCfg
 from legged_lab import LEGGED_LAB_ROOT_DIR
 
 
-G1_29DOF_LOCK_WAIST_CFG = ArticulationCfg(
+G1_27DOF_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{LEGGED_LAB_ROOT_DIR}/data/Robots/Unitree/g1_29dof_lock_waist/g1_29dof_lock_waist.usd",
+        usd_path=f"{LEGGED_LAB_ROOT_DIR}/data/Robots/Unitree/g1_27dof/g1_27dof.usd",
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
@@ -97,6 +97,6 @@ G1_29DOF_LOCK_WAIST_CFG = ArticulationCfg(
 )
 """Configuration for the Unitree G1 Humanoid robot."""
 
-G1_29DOF_LOCK_WAIST_MINIMAL_CFG = G1_29DOF_LOCK_WAIST_CFG.copy()
-G1_29DOF_LOCK_WAIST_MINIMAL_CFG.spawn.usd_path = f"{LEGGED_LAB_ROOT_DIR}/data/Robots/Unitree/g1_29dof_lock_waist_minimal/g1_29dof_lock_waist_minimal.usd"
+G1_27DOF_MINIMAL_CFG = G1_27DOF_CFG.copy()
+G1_27DOF_MINIMAL_CFG.spawn.usd_path = f"{LEGGED_LAB_ROOT_DIR}/data/Robots/Unitree/g1_27dof_minimal/g1_27dof_minimal.usd"
 
