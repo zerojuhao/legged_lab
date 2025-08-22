@@ -22,15 +22,8 @@ class G1AmpFlatEnvCfg(G1AmpRoughEnvCfg):
         self.scene.height_scanner = None
         
         # ------------------------------------------------------
-        # motion loader
+        # motion data
         # ------------------------------------------------------
-        self.motion_loader.motion_weights = {
-            # the motion names can be obtained by running `utils/print_motion_names.py`
-            "08_09_poses": 1.0,      # walk fast in large step
-            "08_03_poses": 1.0,      # walk fast in large step
-            "08_04_poses": 1.0,      # walk slow in large step
-            "77_02_poses": 1.0,      # stand
-        }
         
         # ------------------------------------------------------
         # Observations

@@ -45,3 +45,5 @@ class RslRlAmpCfg:
     amp_discriminator: AMPDiscriminatorCfg = AMPDiscriminatorCfg()
     """Configuration for the AMP discriminator network."""
 
+    motion_dataset: str = MISSING
+    """Name of the motion data term to use in AMP training."""

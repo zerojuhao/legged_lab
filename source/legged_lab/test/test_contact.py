@@ -25,11 +25,11 @@ from isaaclab.managers import SceneEntityCfg
 
 from legged_lab.tasks.locomotion.amp.config.g1.amp_flat_env_cfg import G1AmpFlatEnvCfg
 from legged_lab.tasks.locomotion.amp.amp_env import AmpEnv
-from legged_lab.assets.unitree import G1_29DOF_LOCK_WAIST_CFG
+from legged_lab.assets.unitree import G1_27DOF_CFG
  
 def main():
     env_cfg = G1AmpFlatEnvCfg()
-    env_cfg.scene.robot = G1_29DOF_LOCK_WAIST_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    env_cfg.scene.robot = G1_27DOF_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
     env_cfg.scene.robot.spawn.articulation_props.enabled_self_collisions = True # type:ignore
     env_cfg.scene.robot.spawn.articulation_props.fix_root_link = True # type:ignore
     env_cfg.actions.joint_pos.use_default_offset = False

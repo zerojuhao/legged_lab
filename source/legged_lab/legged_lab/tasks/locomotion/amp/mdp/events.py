@@ -4,6 +4,7 @@ from __future__ import annotations
 import math
 import torch
 from typing import TYPE_CHECKING, Literal
+import random
 
 import carb
 import omni.physics.tensors.impl.api as physx
@@ -21,13 +22,11 @@ from isaaclab.terrains import TerrainImporter
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
-    from legged_lab.tasks.locomotion.amp.amp_env import AmpEnv
-
-from legged_lab.tasks.locomotion.amp.utils_amp import MotionLoader
+    from legged_lab.envs import ManagerBasedAmpEnv
 
 
 def ref_state_init_root(
-    env: AmpEnv, 
+    env: ManagerBasedAmpEnv, 
     env_ids: torch.Tensor,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     pos_rsi: bool = True,
@@ -46,9 +45,18 @@ def ref_state_init_root(
 
     num_envs = env_ids.shape[0]
     dt = env.cfg.sim.dt * env.cfg.decimation
-    motion_ids = env.motion_loader.sample_motions(num_envs)
-    motion_times = env.motion_loader.sample_times(motion_ids, truncate_time=dt)
-    motion_state_dict = env.motion_loader.get_motion_state(motion_ids, motion_times)
+
+    if motion_dataset is None:
+        # select one dataset randomly by weights
+        term_weights = env.motion_data_manager.get_term_weights()
+        motion_dataset = random.choices(list(term_weights.keys()), weights=list(term_weights.values()))[0]
+    else:
+        if motion_dataset not in env.motion_data_manager.active_terms():
+            raise ValueError(f"Motion dataset '{motion_dataset}' not found in the active terms.")
+    motion_loader = env.motion_data_manager.get_term(motion_dataset)
+    motion_ids = motion_loader.sample_motions(num_envs)
+    motion_times = motion_loader.sample_times(motion_ids, truncate_time=dt)
+    motion_state_dict = motion_loader.get_motion_state(motion_ids, motion_times)
     
     lift_a_little = 0.05
     # lift the root position a little bit to avoid collision with the ground
@@ -72,9 +80,10 @@ def ref_state_init_root(
     
 
 def ref_state_init_dof(
-    env: AmpEnv, 
+    env: ManagerBasedAmpEnv, 
     env_ids: torch.Tensor,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    motion_dataset: str | None = None,
 ):
     """Reference State Initialization (RSI) for the joints (DoF) of the robot.
     Sample from the motion loader and set the joint positions and velocities.
@@ -91,10 +100,19 @@ def ref_state_init_dof(
 
     num_envs = env_ids.shape[0]
     dt = env.cfg.sim.dt * env.cfg.decimation
-    motion_ids = env.motion_loader.sample_motions(num_envs)
-    motion_times = env.motion_loader.sample_times(motion_ids, truncate_time=dt)
-    motion_state_dict = env.motion_loader.get_motion_state(motion_ids, motion_times)
-        
+    
+    if motion_dataset is None:
+        # select one dataset randomly by weights
+        term_weights = env.motion_data_manager.get_term_weights()
+        motion_dataset = random.choices(list(term_weights.keys()), weights=list(term_weights.values()))[0]
+    else:
+        if motion_dataset not in env.motion_data_manager.active_terms():
+            raise ValueError(f"Motion dataset '{motion_dataset}' not found in the active terms.")
+    motion_loader = env.motion_data_manager.get_term(motion_dataset)
+    motion_ids = motion_loader.sample_motions(num_envs)
+    motion_times = motion_loader.sample_times(motion_ids, truncate_time=dt)
+    motion_state_dict = motion_loader.get_motion_state(motion_ids, motion_times)
+
     joint_pos = motion_state_dict["dof_pos"]
     joint_vel = motion_state_dict["dof_vel"]
     

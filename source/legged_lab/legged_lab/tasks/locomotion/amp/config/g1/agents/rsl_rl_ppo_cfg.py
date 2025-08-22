@@ -3,11 +3,11 @@ import os
 from isaaclab.utils import configclass
 
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoActorCriticRecurrentCfg, RslRlPpoAlgorithmCfg
-from legged_lab.rsl_rl import RslRlPpoAmpAlgorithmCfg, RslRlAmpCfg, RslRlOnPolicyRunnerAmpCfg, RslRlPpoActorCriticConv2dCfg
+from legged_lab.rsl_rl import RslRlPpoAmpAlgorithmCfg, RslRlAmpCfg, RslRlPpoActorCriticConv2dCfg
 from legged_lab import LEGGED_LAB_ROOT_DIR
 
 @configclass
-class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
+class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 10000
     save_interval = 200
@@ -23,12 +23,6 @@ class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
             {"out_channels": 4, "kernel_size": 3, "stride": 2},
         ],
         conv_linear_output_size=8,
-    )
-    motion_file_path = os.path.join(
-        LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof_lock_waist", "retargeted_motion.pkl"
-    )
-    motion_cfg_path = os.path.join(
-        LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof_lock_waist", "retargeted.yaml"
     )
     algorithm = RslRlPpoAmpAlgorithmCfg(
         class_name="PPOAmp",
@@ -56,7 +50,8 @@ class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerAmpCfg):
                 activation="elu",
                 amp_reward_scale=2.0,
                 task_reward_lerp=0.1
-            )
+            ),
+            motion_dataset = "dataset" # match the term name in amp_env_cfg
         )
     )
 

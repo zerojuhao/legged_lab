@@ -48,15 +48,4 @@ class RslRlPpoAmpAlgorithmCfg(RslRlPpoAlgorithmCfg):
 # Runner configurations #
 #########################
 
-
-@configclass
-class RslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
-    """Configuration for the on-policy runner with AMP support."""
-
-    motion_file_path: str = MISSING
-    """Path to the motion file for AMP training."""
-    
-    motion_cfg_path: str = MISSING
-    """Path to the motion configuration file for AMP training."""
-
     

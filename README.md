@@ -1,7 +1,7 @@
 # Legged Lab
 
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
-[![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.1.0-silver)](https://isaac-sim.github.io/IsaacLab)
+[![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.2.0-silver)](https://isaac-sim.github.io/IsaacLab)
 [![Python](https://img.shields.io/badge/python-3.10-blue.svg)](https://docs.python.org/3/whatsnew/3.10.html)
 [![Linux platform](https://img.shields.io/badge/platform-linux--64-orange.svg)](https://releases.ubuntu.com/20.04/)
 [![Windows platform](https://img.shields.io/badge/platform-windows--64-orange.svg)](https://www.microsoft.com/en-us/)
@@ -15,18 +15,17 @@ This repository is an extension for legged robot reinforcement learning based on
 **Key Features:**
 
 - `RL` Support vanilla RL for legged robots, including Unitree G1, Go2.
-- `AMP` Adversarial Motion Priors (AMP) for humanoid robots, including Unitree G1. 
+- `AMP` Adversarial Motion Priors (AMP) for humanoid robots, including Unitree G1. We suggest retargeting the human motion data by [GMR](https://github.com/YanjieZe/GMR).
 
+## Demo
+
+* Adversarial Motion Priors for Unitree G1:
 https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
 
-## TODOS
+## News & Updates
 
-- [ ] Add more details about motion retargeting
-- [ ] Add more legged robots, such as Unitree H1
-- [x] Self-contact penalty in AMP
-- [x] Asymmetric Actor-Critic in AMP
-- [ ] Symmetric Reward
-- [ ] Sim2sim in mujoco
+- 2025/08/22: Compatible with Isaac Lab 2.2.0.
+- 2025/08/21: Add support for retargeting human motion data by [GMR](https://github.com/YanjieZe/GMR).
 
 ## Installation
 
@@ -125,46 +124,18 @@ python scripts/rsl_rl/play.py --task LeggedLab-Isaac-AMP-Flat-G1-Play-v0 --headl
 
 The video will be saved in the `logs/rsl_rl/experiment_name/run_name/videos/play` directory.
 
-## Code formatting
+## TODOS
 
-We have a pre-commit template to automatically format your code.
-To install pre-commit:
+- [ ] Add more legged robots, such as Unitree H1
+- [x] Self-contact penalty in AMP
+- [x] Asymmetric Actor-Critic in AMP
+- [ ] Symmetric Reward
+- [ ] Sim2sim in mujoco
 
-```bash
-pip install pre-commit
-```
+## Acknowledgement
 
-Then you can run pre-commit with:
+- [IsaacLab](https://github.com/isaac-sim/IsaacLab)
+- [RSL-RL](https://github.com/leggedrobotics/rsl_rl)
+- [AMP_for_hardware](https://github.com/Alescontrela/AMP_for_hardware)
+- [GMR](https://github.com/YanjieZe/GMR)
 
-```bash
-pre-commit run --all-files
-```
-
-## Troubleshooting
-
-### Pylance Missing Indexing of Extensions
-
-In some VsCode versions, the indexing of part of the extensions is missing. In this case, add the path to your extension in `.vscode/settings.json` under the key `"python.analysis.extraPaths"`.
-
-```json
-{
-    "python.analysis.extraPaths": [
-        "<path-to-ext-repo>/source/legged_lab"
-    ]
-}
-```
-
-### Pylance Crash
-
-If you encounter a crash in `pylance`, it is probable that too many files are indexed and you run out of memory.
-A possible solution is to exclude some of omniverse packages that are not used in your project.
-To do so, modify `.vscode/settings.json` and comment out packages under the key `"python.analysis.extraPaths"`
-Some examples of packages that can likely be excluded are:
-
-```json
-"<path-to-isaac-sim>/extscache/omni.anim.*"         // Animation packages
-"<path-to-isaac-sim>/extscache/omni.kit.*"          // Kit UI tools
-"<path-to-isaac-sim>/extscache/omni.graph.*"        // Graph UI tools
-"<path-to-isaac-sim>/extscache/omni.services.*"     // Services tools
-...
-```

@@ -13,7 +13,7 @@ from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import LocomotionVelo
 ##
 # Pre-defined configs
 ##
-from legged_lab.assets.unitree import G1_29DOF_LOCK_WAIST_MINIMAL_CFG, G1_29DOF_LOCK_WAIST_CFG
+from legged_lab.assets.unitree import G1_27DOF_MINIMAL_CFG, G1_27DOF_CFG
 
 
 @configclass
@@ -147,7 +147,7 @@ class G1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # post init of parent
         super().__post_init__()
         # Scene
-        self.scene.robot = G1_29DOF_LOCK_WAIST_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.robot = G1_27DOF_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/waist_yaw_link"
 
         # Randomization

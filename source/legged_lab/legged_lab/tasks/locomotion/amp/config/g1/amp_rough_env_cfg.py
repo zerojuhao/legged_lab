@@ -5,19 +5,47 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 
 import legged_lab.tasks.locomotion.amp.mdp as mdp
-from legged_lab.tasks.locomotion.velocity.velocity_env_cfg import RewardsCfg, MySceneCfg, ScandotsSceneCfg
-from legged_lab.tasks.locomotion.amp.amp_env_cfg import LocomotionAmpEnvCfg
+from legged_lab.managers import MotionDataTermCfg
+from legged_lab.tasks.locomotion.amp.amp_env_cfg import LocomotionAmpEnvCfg, MotionDataCfg
 
 import isaaclab.terrains as terrain_gen
 
 ##
 # Pre-defined configs
 ##
-from legged_lab.assets.unitree import G1_29DOF_LOCK_WAIST_MINIMAL_CFG, G1_29DOF_LOCK_WAIST_CFG
+from legged_lab.assets.unitree import G1_27DOF_MINIMAL_CFG, G1_27DOF_CFG
 
 from legged_lab import LEGGED_LAB_ROOT_DIR
 
-
+MOTIONDATA_DOF_NAMES = [
+    'left_hip_pitch_joint',
+    'left_hip_roll_joint',
+    'left_hip_yaw_joint',
+    'left_knee_joint',
+    'left_ankle_pitch_joint',
+    'left_ankle_roll_joint',
+    'right_hip_pitch_joint',
+    'right_hip_roll_joint',
+    'right_hip_yaw_joint',
+    'right_knee_joint',
+    'right_ankle_pitch_joint',
+    'right_ankle_roll_joint',
+    'waist_yaw_joint',
+    'left_shoulder_pitch_joint',
+    'left_shoulder_roll_joint',
+    'left_shoulder_yaw_joint',
+    'left_elbow_joint',
+    'left_wrist_roll_joint',
+    'left_wrist_pitch_joint',
+    'left_wrist_yaw_joint',
+    'right_shoulder_pitch_joint',
+    'right_shoulder_roll_joint',
+    'right_shoulder_yaw_joint',
+    'right_elbow_joint',
+    'right_wrist_roll_joint',
+    'right_wrist_pitch_joint',
+    'right_wrist_yaw_joint'
+]
 
 @configclass
 class G1AmpRewards():
@@ -142,10 +170,40 @@ class G1AmpRewards():
         },
     )
 
+@configclass
+class G1WalkMotionDataCfg(MotionDataCfg):
+    """Configuration for the G1 walk motion data."""
+
+    # motion data term
+    dataset: MotionDataTermCfg = MotionDataTermCfg(
+        weight=1.0,
+        motion_data_dir=os.path.join(LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_27dof", "walk"),
+        motion_data_weight={
+            # "B9_-__Walk_turn_left_90_stageii": 1.0,
+            "B10_-__Walk_turn_left_45_stageii": 1.0,
+            # "B11_-__Walk_turn_left_135_stageii": 1.0, 
+            # "B13_-__Walk_turn_right_90_stageii": 1.0, 
+            "B14_-__Walk_turn_right_45_t2_stageii": 1.0,
+            "B15_-__Walk_turn_around_stageii": 1.0, 
+            "B22_-__side_step_left_stageii": 1.0, 
+            "B23_-__side_step_right_stageii": 1.0, 
+            "B4_-_Stand_to_Walk_backwards_stageii": 1.0,
+        },
+        dof_names=MOTIONDATA_DOF_NAMES,
+        key_links_mapping={
+            # the keys are the names of the links in the motion dataset
+            # the values are the names of the links in lab 
+            "left_ankle_roll_link": "left_ankle_roll_link",
+            "right_ankle_roll_link": "right_ankle_roll_link",
+            "left_wrist_yaw_link": "left_wrist_yaw_link",
+            "right_wrist_yaw_link": "right_wrist_yaw_link",
+        },
+    )
 
 @configclass
 class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
     rewards: G1AmpRewards = G1AmpRewards()
+    motion_data: G1WalkMotionDataCfg = G1WalkMotionDataCfg()
 
     def __post_init__(self):
         # post init of parent
@@ -154,7 +212,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Scene
         # ------------------------------------------------------
-        self.scene.robot = G1_29DOF_LOCK_WAIST_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.robot = G1_27DOF_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         # height scanner
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/pelvis"
         # terrain
@@ -201,38 +259,11 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # make sure the curriculum is enabled
         
         # ------------------------------------------------------
-        # motion loader
+        # motion data
         # ------------------------------------------------------
-        self.motion_loader.motion_file_path = os.path.join(
-            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof_lock_waist", "retargeted_motion.pkl"
+        self.motion_data.dataset.motion_data_dir = os.path.join(
+            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_27dof", "walk"
         )
-        self.motion_loader.key_links_mapping = {
-            # the keys are the names of the links in the motion dataset
-            # the values are the names of the links in lab 
-            "left_ankle_roll_link": "left_ankle_roll_link",
-            "right_ankle_roll_link": "right_ankle_roll_link",
-            "left_rubber_hand": "left_wrist_yaw_link",
-            "right_rubber_hand": "right_wrist_yaw_link",
-        }
-        self.motion_loader.motion_weights = {
-            # the motion names can be obtained by running `utils/print_motion_names.py`
-            # "36_08_poses": 1.0,     # stairs
-            # "36_26_poses": 1.0,     # stairs
-            # "36_32_poses": 1.0,     # stairs
-            # "20_05_poses": 1.0,      # walk with arm
-            # "22_25_poses": 1.0,      # slow walk
-            # "10_04_poses": 1.0,      # walk from stand
-            "08_09_poses": 1.0,      # walk fast in large step
-            "08_03_poses": 1.0,      # walk fast in large step
-            "08_04_poses": 1.0,      # walk slow in large step
-            # "08_06_poses": 1.0,      # walk fast in large step
-            # "08_08_poses": 1.0,      # walk fast in large step
-            # "16_34_poses": 1.0,      # slow walk and stop
-            "77_02_poses": 1.0,      # stand
-            # "82_08_poses": 1.0,      # stand, then slow walk
-            # "105_10_poses": 1.0,     # walk and turn 180
-            # "105_27_poses": 1.0,     # walk and turn 180
-        }
         
         # ------------------------------------------------------
         # Observations
@@ -241,8 +272,8 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         self.observations.amp.key_links_pos_b.params["local_pos_dict"] = {
             "left_ankle_roll_link": (0.0, 0.0, 0.0),
             "right_ankle_roll_link": (0.0, 0.0, 0.0),
-            "left_wrist_yaw_link": (0.0415, 0.003, 0.0),
-            "right_wrist_yaw_link": (0.0415, -0.003, 0.0),
+            "left_wrist_yaw_link": (0.0, 0.0, 0.0),
+            "right_wrist_yaw_link": (0.0, 0.0, 0.0),
             # "waist_yaw_link": (0.0, 0.0, 0.4),
             # "left_shoulder_roll_link": (0.0, 0.0, 0.0),
             # "right_shoulder_roll_link": (0.0, 0.0, 0.0),
@@ -257,11 +288,9 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Events
         # ------------------------------------------------------
-        self.events.push_robot = None       # TODO
-        self.events.add_base_mass = None    # TODO
+        self.events.add_base_mass.params["asset_cfg"].body_names = "waist_yaw_link"
         self.events.base_external_force_torque.params["asset_cfg"].body_names = ["waist_yaw_link"]
-        self.events.reset_base_rsi.params["pos_rsi"] = False    # no offset in x and y for the root position during RSI
-
+        
         # ------------------------------------------------------
         # Rewards
         # ------------------------------------------------------

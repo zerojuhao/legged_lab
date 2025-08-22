@@ -2,11 +2,11 @@ import gymnasium as gym
 
 from . import agents
 
-from legged_lab.tasks.locomotion.amp.amp_env import AmpEnv
+from legged_lab.envs import ManagerBasedAmpEnv
 
 gym.register(
     id="LeggedLab-Isaac-AMP-Rough-G1-v0",
-    entry_point="legged_lab.tasks.locomotion.amp.amp_env:AmpEnv",
+    entry_point="legged_lab.envs:ManagerBasedAmpEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.amp_rough_env_cfg:G1AmpRoughEnvCfg",
@@ -16,7 +16,7 @@ gym.register(
 
 gym.register(
     id="LeggedLab-Isaac-AMP-Rough-G1-Play-v0",
-    entry_point="legged_lab.tasks.locomotion.amp.amp_env:AmpEnv",
+    entry_point="legged_lab.envs:ManagerBasedAmpEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.amp_rough_env_cfg:G1AmpRoughEnvCfg_PLAY",
@@ -26,7 +26,7 @@ gym.register(
 
 gym.register(
     id="LeggedLab-Isaac-AMP-Flat-G1-v0",
-    entry_point="legged_lab.tasks.locomotion.amp.amp_env:AmpEnv",
+    entry_point="legged_lab.envs:ManagerBasedAmpEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.amp_flat_env_cfg:G1AmpFlatEnvCfg",
@@ -36,7 +36,7 @@ gym.register(
 
 gym.register(
     id="LeggedLab-Isaac-AMP-Flat-G1-Play-v0",
-    entry_point="legged_lab.tasks.locomotion.amp.amp_env:AmpEnv",
+    entry_point="legged_lab.envs:ManagerBasedAmpEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.amp_flat_env_cfg:G1AmpFlatEnvCfg_PLAY",

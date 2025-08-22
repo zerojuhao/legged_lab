@@ -6,7 +6,7 @@ parser = argparse.ArgumentParser(description="Print motion names from a motion f
 parser.add_argument(
     "--robot",
     type=str,
-    default="g1_29dof_lock_waist",
+    default="g1_27dof",
     help="The robot to be used.",
 )
 parser.add_argument(
