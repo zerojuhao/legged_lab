@@ -17,7 +17,6 @@ simulation_app = app_launcher.app
 
 import torch
 
-from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.assets import Articulation
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.markers.config import FRAME_MARKER_CFG
@@ -25,8 +24,7 @@ import isaaclab.utils.math as math_utils
 import isaaclab.sim as sim_utils
 
 from legged_lab.tasks.locomotion.amp.config.g1.amp_flat_env_cfg import G1AmpFlatEnvCfg
-from legged_lab.tasks.locomotion.amp.amp_env import AmpEnv
-from legged_lab.tasks.locomotion.amp.utils_amp.motion_loader import MotionLoader
+from legged_lab.envs import ManagerBasedAmpEnv
 from legged_lab import LEGGED_LAB_ROOT_DIR
 
 import os
@@ -37,7 +35,7 @@ def main():
     env_cfg.scene.num_envs = args_cli.num_envs
     env_cfg.sim.device = args_cli.device
     env_cfg.sim.dt = 0.01  # Set simulation time step
-    env = AmpEnv(cfg=env_cfg)   # motion loader is initialized inside AmpEnv
+    env = ManagerBasedAmpEnv(cfg=env_cfg)   # motion loader is initialized inside AmpEnv
     robot:Articulation = env.scene["robot"]
     env_origins = env.scene.env_origins
 
@@ -61,9 +59,12 @@ def main():
     )
     marker_vis = VisualizationMarkers(marker_cfg)
     
-    motion_ids = env.motion_loader.sample_motions(args_cli.num_envs)
+    motion_dataset = env.motion_data_manager.active_terms[0]
+    motion_loader = env.motion_data_manager.get_term(motion_dataset)
+    
+    motion_ids = motion_loader.sample_motions(args_cli.num_envs)
     print("Sampled motion IDs:", motion_ids)
-    motion_durations = env.motion_loader.get_motion_duration(motion_ids)
+    motion_durations = motion_loader.get_motion_duration(motion_ids)
 
     print(env.observation_manager.active_terms["amp"])
     
@@ -78,7 +79,7 @@ def main():
             
             motion_times = sim_time % motion_durations
             
-            motion_data = env.motion_loader.get_motion_state(motion_ids, motion_times)
+            motion_data = motion_loader.get_motion_state(motion_ids, motion_times)
             
             root_pos = motion_data["root_pos_w"]
             root_quat = motion_data["root_quat"]
