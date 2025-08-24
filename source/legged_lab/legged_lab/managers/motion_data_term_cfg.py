@@ -35,4 +35,6 @@ class MotionDataTermCfg:
     - the keys are the names of the links in the motion dataset
     - the values are the names of the links in lab 
     """
-
+    
+    num_steps: int = 2
+    """Number of steps given by mini-batch generator."""

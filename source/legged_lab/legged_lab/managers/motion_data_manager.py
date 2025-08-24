@@ -409,10 +409,12 @@ class MotionDataTerm(ManagerTermBase):
         if batch_size % num_mini_batches != 0:
             raise ValueError(f"Epoch batch size {batch_size} is not divisible by number of mini-batches {num_mini_batches}.")
 
-        # TODO: consider more than 2 steps
+        num_steps = self.cfg.num_steps
+        if num_steps < 2:
+            raise ValueError(f"[MotionDataTerm] Number of steps must be at least 2, but got {num_steps}.")
         motion_ids = self.sample_motions(batch_size)
-        motion_times = self.sample_times(motion_ids, truncate_time=dt)
-        motion_next_times = motion_times + dt
+        motion_start_times = self.sample_times(motion_ids, truncate_time=dt*(num_steps-1))
+        motion_times = [motion_start_times + i * dt for i in range(num_steps)]
         
         # get the observation terms to extract from the motion state
         amp_obs_terms = self._env.observation_manager.active_terms["amp"]
@@ -422,20 +424,16 @@ class MotionDataTerm(ManagerTermBase):
             if hasattr(self, func_name):
                 extract_funcs.append(getattr(self, func_name))
             else:
-                raise ValueError(f"[MotionLoader] Observation term '{term}' is not supported, please check the observation terms in the config file.")
+                raise ValueError(f"[MotionDataTerm] Observation term '{term}' is not supported, please check the observation terms in the config file.")
         
-        motion_state_dict = self.get_motion_state(motion_ids, motion_times)
-        motion_next_state_dict = self.get_motion_state(motion_ids, motion_next_times)
+        motion_state_dicts = [self.get_motion_state(motion_ids, t) for t in motion_times]
+        # motion_next_state_dict = self.get_motion_state(motion_ids, motion_next_times)
         
-        motion_state = []
-        motion_next_state = []
-        for func in extract_funcs:
-            motion_state.append(func(motion_state_dict))
-            motion_next_state.append(func(motion_next_state_dict))
-        motion_state_tensor = torch.cat(motion_state, dim=-1).to(self.device)  # (N, D), where D is the total dimension of the motion state
-        motion_next_state_tensor = torch.cat(motion_next_state, dim=-1).to(self.device)  # (N, D), where D is the total dimension of the motion state
-        
-        motion_two_state_tensor = torch.cat([motion_state_tensor, motion_next_state_tensor], dim=1)  # (N, 2*D)
+        motion_states = []
+        for ms_dict in motion_state_dicts:
+            for func in extract_funcs:
+                motion_states.append(func(ms_dict))
+        motion_states_tensor = torch.cat(motion_states, dim=1).to(self.device) # (N, num_steps*D), where D is the total dimension of the motion state
         
         for epoch in range(num_epochs):
             indices = torch.randperm(batch_size, device=self.device)
@@ -444,7 +442,7 @@ class MotionDataTerm(ManagerTermBase):
                 end = (i + 1) * mini_batch_size
                 mini_batch_idx = indices[start:end]
                 
-                yield motion_two_state_tensor[mini_batch_idx]
+                yield motion_states_tensor[mini_batch_idx]
         
     def _extract_dof_pos(self, motion_state: dict) -> torch.Tensor:
         """Extract the dof position from the motion state."""
@@ -477,7 +475,6 @@ class MotionDataTerm(ManagerTermBase):
         projected_gravity = math_utils.quat_apply_inverse(root_quat, gravity_vec_w)
         return projected_gravity
         
-
 
 class MotionDataManager(ManagerBase):
     """Manager for motion data.

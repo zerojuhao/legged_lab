@@ -47,6 +47,8 @@ MOTIONDATA_DOF_NAMES = [
     'right_wrist_yaw_joint'
 ]
 
+AMP_NUM_STEPS = 3
+
 @configclass
 class G1AmpRewards():
     """Reward terms for the MDP."""
@@ -198,6 +200,7 @@ class G1WalkMotionDataCfg(MotionDataCfg):
             "left_wrist_yaw_link": "left_wrist_yaw_link",
             "right_wrist_yaw_link": "right_wrist_yaw_link",
         },
+        num_steps=AMP_NUM_STEPS,
     )
 
 @configclass
@@ -284,6 +287,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
             # "left_knee_link": (0.0, 0.0, 0.0),
             # "right_knee_link": (0.0, 0.0, 0.0),
         }
+        self.observations.amp.history_length = AMP_NUM_STEPS
         
         # ------------------------------------------------------
         # Events
