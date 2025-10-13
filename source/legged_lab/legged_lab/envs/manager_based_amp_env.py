@@ -45,8 +45,9 @@ class ManagerBasedAmpEnv(ManagerBasedRLEnv):
         Returns:
             The AMP observations as a tensor.
         """
-        amp_obs_dict = self.observation_manager.compute_group("amp", update_history=False)
-        return amp_obs_dict
+        # TODO: consider obs_groups
+        amp_obs = self.observation_manager.compute_group("amp", update_history=False)
+        return amp_obs # (num_envs, history_length, obs_dim)
     
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
         """Execute one time-step of the environment's dynamics and reset terminated environments.
@@ -134,9 +135,7 @@ class ManagerBasedAmpEnv(ManagerBasedRLEnv):
         # note: done after reset to get the correct observations for reset envs
         self.obs_buf = self.observation_manager.compute(update_history=True)
         if len(reset_env_ids) > 0:
-            for term in amp_obs.keys():
-                # reset the observations for the reset envs
-                self.obs_buf["amp"][term][reset_env_ids] = amp_obs[term][reset_env_ids]
+            self.obs_buf["amp"][reset_env_ids] = amp_obs[reset_env_ids]
         
         # return observations, rewards, resets and extras
         return self.obs_buf, self.reward_buf, self.reset_terminated, self.reset_time_outs, self.extras

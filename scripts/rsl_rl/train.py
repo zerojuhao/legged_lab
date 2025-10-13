@@ -144,8 +144,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # create runner from rsl-rl
     if agent_cfg.algorithm.class_name == "PPOAmp":
-        from rsl_rl.runners import OnPolicyRunnerAMP
-        runner = OnPolicyRunnerAMP(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+        from rsl_rl.runners import AMPRunner
+        runner = AMPRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     else:
         runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     # write git state to logs

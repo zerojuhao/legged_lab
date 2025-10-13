@@ -185,7 +185,8 @@ class AmpObservationsCfg():
     
         def __post_init__(self):
             self.enable_corruption = False
-            self.concatenate_terms = False
+            self.concatenate_terms = True
+            self.concatenate_dim = -1
             self.history_length = 2
             self.flatten_history_dim = False    # if True, it will flatten each term history first and then concatenate them, 
                                                 # which is not we want for AMP observations

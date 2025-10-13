@@ -13,6 +13,7 @@ class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
     save_interval = 200
     experiment_name = "g1_amp_rough"
     empirical_normalization = False
+    obs_groups = {"policy": ["policy"], "critic": ["critic"], "amp": ["amp"]}
     policy = RslRlPpoActorCriticConv2dCfg(
         init_noise_std=0.5,
         actor_hidden_dims=[512, 256, 128],
@@ -57,6 +58,7 @@ class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
 
 @configclass
 class G1FlatRslRlOnPolicyRunnerAmpCfg(G1RoughRslRlOnPolicyRunnerAmpCfg):
+    obs_groups = {"policy": ["policy"], "critic": ["critic"], "amp": ["amp"]}
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
         actor_hidden_dims=[512, 256, 128],

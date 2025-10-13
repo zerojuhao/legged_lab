@@ -25,6 +25,7 @@ https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
 
 ## News & Updates
 
+- 2025/10/14: Update to support rsl_rl v3.1.1. Only walking in flat terrain is supported now.
 - 2025/08/24: Support using more steps observations and motion data in AMP training.
 - 2025/08/22: Compatible with Isaac Lab 2.2.0.
 - 2025/08/21: Add support for retargeting human motion data by [GMR](https://github.com/YanjieZe/GMR).
@@ -58,7 +59,7 @@ git clone https://github.com/zitongbai/rsl_rl.git
 git clone git@github.com:zitongbai/rsl_rl.git
 
 cd rsl_rl
-git checkout feature/amp
+git checkout feature/amp_3
 ```
 
 - Install the forked RSL-RL library:
@@ -133,6 +134,8 @@ The video will be saved in the `logs/rsl_rl/experiment_name/run_name/videos/play
 - [x] Asymmetric Actor-Critic in AMP
 - [ ] Symmetric Reward
 - [ ] Sim2sim in mujoco
+- [ ] Add support for image observations
+- [ ] Walk in rough terrain with AMP
 
 ## Acknowledgement
 
