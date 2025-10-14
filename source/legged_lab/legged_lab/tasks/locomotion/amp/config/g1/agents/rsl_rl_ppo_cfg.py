@@ -8,17 +8,19 @@ from legged_lab import LEGGED_LAB_ROOT_DIR
 
 @configclass
 class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
+    class_name = "AMPRunner"
     num_steps_per_env = 24
     max_iterations = 10000
     save_interval = 200
     experiment_name = "g1_amp_rough"
-    empirical_normalization = False
     obs_groups = {"policy": ["policy"], "critic": ["critic"], "amp": ["amp"]}
     policy = RslRlPpoActorCriticConv2dCfg(
         init_noise_std=0.5,
         actor_hidden_dims=[512, 256, 128],
         critic_hidden_dims=[512, 256, 128],
         activation="elu",
+        actor_obs_normalization=False,
+        critic_obs_normalization=False,
         conv_layers_params=[
             {"out_channels": 2, "kernel_size": 3, "stride": 2},
             {"out_channels": 4, "kernel_size": 3, "stride": 2},
@@ -63,6 +65,8 @@ class G1FlatRslRlOnPolicyRunnerAmpCfg(G1RoughRslRlOnPolicyRunnerAmpCfg):
         init_noise_std=1.0,
         actor_hidden_dims=[512, 256, 128],
         critic_hidden_dims=[512, 256, 128],
+        actor_obs_normalization=False,
+        critic_obs_normalization=False,
         activation="elu",
     )
     
