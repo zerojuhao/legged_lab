@@ -46,9 +46,9 @@ class G1AmpFlatEnvCfg(G1AmpRoughEnvCfg):
         self.rewards.alive.weight = 0.15
         
         # base
-        self.rewards.lin_vel_z_l2.weight = -0.05
-        self.rewards.ang_vel_xy_l2.weight = -0.05
-        self.rewards.flat_orientation_l2.weight = -1.0
+        self.rewards.lin_vel_z_l2 = None 
+        self.rewards.ang_vel_xy_l2 = None
+        self.rewards.flat_orientation_l2 = None
         self.rewards.base_height = None
         
         # joint
@@ -65,9 +65,9 @@ class G1AmpFlatEnvCfg(G1AmpRoughEnvCfg):
         self.rewards.feet_gait = None
         
         # deviation
-        self.rewards.joint_deviation_hip.weight = -0.5
-        self.rewards.joint_deviation_arms.weight = -0.1
-        self.rewards.joint_deviation_waist.weight = -0.5
+        self.rewards.joint_deviation_hip = None 
+        self.rewards.joint_deviation_arms = None
+        self.rewards.joint_deviation_waist = None
 
         self.rewards.undesired_contacts.weight = -1.0
         self.rewards.undesired_contacts.params["threshold"] = 1.0
@@ -79,9 +79,9 @@ class G1AmpFlatEnvCfg(G1AmpRoughEnvCfg):
         # ------------------------------------------------------
         # Commands
         # ------------------------------------------------------
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.3, 0.3)
+        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.0)
         self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.1, 0.1)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
         
 
 @configclass
@@ -95,9 +95,11 @@ class G1AmpFlatEnvCfg_PLAY(G1AmpFlatEnvCfg):
         self.scene.env_spacing = 2.5
         self.episode_length_s = 40.0
 
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 1.0)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.3, 0.3)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.2, 0.2)
+        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.0)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.heading = (0.0, 0.0)
+        self.commands.base_velocity.heading_command = True
         # disable randomization for play
         self.observations.policy.enable_corruption = False
         # remove random pushing

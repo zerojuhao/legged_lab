@@ -13,7 +13,7 @@ import isaaclab.terrains as terrain_gen
 ##
 # Pre-defined configs
 ##
-from legged_lab.assets.unitree import G1_27DOF_MINIMAL_CFG, G1_27DOF_CFG
+from legged_lab.assets.unitree import UNITREE_G1_29DOF_CFG
 
 from legged_lab import LEGGED_LAB_ROOT_DIR
 
@@ -31,6 +31,8 @@ MOTIONDATA_DOF_NAMES = [
     'right_ankle_pitch_joint',
     'right_ankle_roll_joint',
     'waist_yaw_joint',
+    'waist_roll_joint',
+    'waist_pitch_joint',
     'left_shoulder_pitch_joint',
     'left_shoulder_roll_joint',
     'left_shoulder_yaw_joint',
@@ -107,7 +109,7 @@ class G1AmpRewards():
     joint_deviation_waist = RewTerm(
         func=mdp.joint_deviation_l1,
         weight=-1.0,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names="waist_yaw_joint")},
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names="waist_.*_joint")},
     )
     
     # -- Feet
@@ -179,7 +181,7 @@ class G1WalkMotionDataCfg(MotionDataCfg):
     # motion data term
     dataset: MotionDataTermCfg = MotionDataTermCfg(
         weight=1.0,
-        motion_data_dir=os.path.join(LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_27dof", "walk"),
+        motion_data_dir=os.path.join(LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof", "walk"),
         motion_data_weight={
             # "B9_-__Walk_turn_left_90_stageii": 1.0,
             "B10_-__Walk_turn_left_45_stageii": 1.0,
@@ -215,7 +217,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Scene
         # ------------------------------------------------------
-        self.scene.robot = G1_27DOF_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.robot = UNITREE_G1_29DOF_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         # height scanner
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/pelvis"
         # terrain
@@ -265,7 +267,7 @@ class G1AmpRoughEnvCfg(LocomotionAmpEnvCfg):
         # motion data
         # ------------------------------------------------------
         self.motion_data.dataset.motion_data_dir = os.path.join(
-            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_27dof", "walk"
+            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "g1_29dof", "walk"
         )
         
         # ------------------------------------------------------

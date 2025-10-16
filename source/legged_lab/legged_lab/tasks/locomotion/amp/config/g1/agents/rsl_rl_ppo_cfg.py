@@ -61,13 +61,16 @@ class G1RoughRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
 @configclass
 class G1FlatRslRlOnPolicyRunnerAmpCfg(G1RoughRslRlOnPolicyRunnerAmpCfg):
     obs_groups = {"policy": ["policy"], "critic": ["critic"], "amp": ["amp"]}
-    policy = RslRlPpoActorCriticCfg(
+    policy = RslRlPpoActorCriticRecurrentCfg(
         init_noise_std=1.0,
         actor_hidden_dims=[512, 256, 128],
         critic_hidden_dims=[512, 256, 128],
         actor_obs_normalization=False,
         critic_obs_normalization=False,
         activation="elu",
+        rnn_type="lstm",
+        rnn_hidden_dim=64,
+        rnn_num_layers=1
     )
     
     def __post_init__(self):

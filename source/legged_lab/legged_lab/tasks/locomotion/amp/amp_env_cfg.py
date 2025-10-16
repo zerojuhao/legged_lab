@@ -126,7 +126,6 @@ class AmpObservationsCfg():
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            self.history_length = 5
             self.enable_corruption = True
             self.concatenate_terms = True
 
@@ -147,7 +146,6 @@ class AmpObservationsCfg():
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            self.history_length = 5
             self.enable_corruption = False
             self.concatenate_terms = True
     
@@ -187,7 +185,7 @@ class AmpObservationsCfg():
             self.enable_corruption = False
             self.concatenate_terms = True
             self.concatenate_dim = -1
-            self.history_length = 2
+            self.history_length = 5
             self.flatten_history_dim = False    # if True, it will flatten each term history first and then concatenate them, 
                                                 # which is not we want for AMP observations
                                                 # Thus, we set it to False, and address it manually
