@@ -161,3 +161,33 @@ def feet_gait(
         cmd_norm = torch.norm(env.command_manager.get_command(command_name), dim=1)
         reward *= cmd_norm > 0.1
     return reward
+
+
+def stand_still(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    command_name: str = "base_velocity",
+    speed_threshold: float = 0.15,
+    scale: float = 0.1,
+) -> torch.Tensor:
+    """当机器人本体线速度和角速度均小于 speed_threshold 时，鼓励关节位置接近默认位置（误差越小奖励越大）。"""
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    # 当前关节位置与速度
+    current_pos = asset.data.joint_pos[:, asset_cfg.joint_ids]
+    # 机器人command基座线速度与角速度（world frame）
+    lin_speed_x = env.command_manager.get_command(command_name)[:, 0]
+    lin_speed_y = env.command_manager.get_command(command_name)[:, 1]
+    ang_speed = env.command_manager.get_command(command_name)[:, 2]
+
+    default_pos = asset.data.default_joint_pos[:, asset_cfg.joint_ids]
+
+    # 计算关节位置误差
+    pos_error = torch.norm(current_pos - default_pos, dim=1)
+    # 使用指数核函数计算奖励
+    reward = torch.exp(-pos_error/scale)
+    # 仅当基座线速度和角速度均低于阈值时给予奖励
+    low_speed_mask = ((lin_speed_x < speed_threshold) & (lin_speed_y < speed_threshold) & (ang_speed < speed_threshold)).float()
+    reward = reward * low_speed_mask
+
+    return reward

@@ -73,10 +73,17 @@ class MotionDataTerm(ManagerTermBase):
             
             # check link_body_list, it is optinal
             link_body_list = motion_raw_data.get("link_body_list", None)
+
             if link_body_list is None:
                 raise ValueError(f"Motion data file {motion_file} does not contain 'link_body_list'.")
-            if link_body_list != self.retargeted_link_names:
-                raise ValueError(f"Link body list in {motion_file} does not match the expected link body list.")
+            link_arr = np.asarray(link_body_list)
+            retargeted_arr = np.asarray(self.retargeted_link_names)
+            if link_arr.shape != retargeted_arr.shape or not np.array_equal(link_arr, retargeted_arr):
+                raise ValueError(
+                    f"Link body list in {motion_file} does not match the expected link body list.\n"
+                    f"link_body_list (shape={link_arr.shape}, type={link_arr.dtype}): {link_arr.tolist()}\n"
+                    f"retargeted_link_names (shape={retargeted_arr.shape}, type={retargeted_arr.dtype}): {retargeted_arr.tolist()}"
+                )
             
             motion_processed_data = self._process_motion_data(motion_raw_data)
             self.motion_data.append(motion_processed_data)

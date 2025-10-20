@@ -18,6 +18,7 @@ from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as Gnoise
 
 ##
 # Pre-defined configs
@@ -28,6 +29,34 @@ import legged_lab.tasks.locomotion.amp.mdp as mdp
 from legged_lab.sensors import RayCasterArrayCfg
 from legged_lab.envs import ManagerBasedAmpEnvCfg
 from legged_lab.managers import MotionDataTermCfg
+
+
+MOTIONDATA_DOF_NAMES = [
+    'left_thigh_yaw_joint',
+    'left_thigh_roll_joint',
+    'left_thigh_pitch_joint',
+    'left_knee_joint',
+    'left_ankle_pitch_joint',
+    'left_ankle_roll_joint',
+    'right_thigh_yaw_joint',
+    'right_thigh_roll_joint',
+    'right_thigh_pitch_joint',
+    'right_knee_joint',
+    'right_ankle_pitch_joint',
+    'right_ankle_roll_joint',
+    'torso_joint',
+    'left_arm_pitch_joint',
+    'left_arm_roll_joint',
+    'left_arm_yaw_joint',
+    'left_elbow_pitch_joint',
+    'left_elbow_yaw_joint',
+    'right_arm_pitch_joint',
+    'right_arm_roll_joint',
+    'right_arm_yaw_joint',
+    'right_elbow_pitch_joint',
+    'right_elbow_yaw_joint',
+]
+
 
 
 @configclass
@@ -115,17 +144,18 @@ class AmpObservationsCfg():
 
         # observation terms (order preserved)
         # base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Gnoise(mean=0.0, std=0.05))
         projected_gravity = ObsTerm(
             func=mdp.projected_gravity,
-            noise=Unoise(n_min=-0.05, n_max=0.05),
+            noise=Gnoise(mean=0.0, std=0.05),
         )
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Gnoise(mean=0.0, std=0.05))
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Gnoise(mean=0.0, std=0.05))
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
+            self.history_length = 1
             self.enable_corruption = True
             self.concatenate_terms = True
 
@@ -185,7 +215,7 @@ class AmpObservationsCfg():
             self.enable_corruption = False
             self.concatenate_terms = True
             self.concatenate_dim = -1
-            self.history_length = 5
+            self.history_length = 1
             self.flatten_history_dim = False    # if True, it will flatten each term history first and then concatenate them, 
                                                 # which is not we want for AMP observations
                                                 # Thus, we set it to False, and address it manually
@@ -275,25 +305,25 @@ class RewardsCfg:
 
     # -- task
     track_lin_vel_xy_exp = RewTerm(
-        func=mdp.track_lin_vel_xy_exp, weight=1.0, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
+        func=mdp.track_lin_vel_xy_exp, weight=0, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
     track_ang_vel_z_exp = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
+        func=mdp.track_ang_vel_z_exp, weight=0, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
     alive = RewTerm(
-        func=mdp.is_alive, weight=0.15
+        func=mdp.is_alive, weight=0
     )
     # -- penalties
-    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
-    ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
-    dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
-    dof_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
-    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
-    dof_energy = RewTerm(func=mdp.joint_energy, weight=-2e-5)
+    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=0)
+    ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=0)
+    dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=0)
+    dof_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=0)
+    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=0)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=0)
+    dof_energy = RewTerm(func=mdp.joint_energy, weight=0)
     feet_air_time = RewTerm(
         func=mdp.feet_air_time,
-        weight=0.125,
+        weight=0,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
             "command_name": "base_velocity",
@@ -302,7 +332,7 @@ class RewardsCfg:
     )
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
-        weight=-1.0,
+        weight=0,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*THIGH"), "threshold": 1.0},
     )
     # -- optional penalties
@@ -332,23 +362,25 @@ class TerminationsCfg:
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
+    # curriculum for velocity command dose not work well now, so we disable them
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
-    lin_vel_cmd_levels = CurrTerm(
-        func=mdp.lin_vel_cmd_levels,
-        params={
-            "reward_term_name": "track_lin_vel_xy_exp",
-            "lin_vel_x_limit": [-0.5, 1.0],
-            "lin_vel_y_limit": [-0.3, 0.3],
-        }
-    )
-    ang_vel_cmd_levels = CurrTerm(
-        func=mdp.ang_vel_cmd_levels,
-        params={
-            "reward_term_name": "track_ang_vel_z_exp",
-            "ang_vel_z_limit": [-0.2, 0.2],
-        }
-    )
+
+    # terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    # lin_vel_cmd_levels = CurrTerm(
+    #     func=mdp.lin_vel_cmd_levels,
+    #     params={
+    #         "reward_term_name": "track_lin_vel_xy_exp",
+    #         "lin_vel_x_limit": [-0.5, 1.0],
+    #         "lin_vel_y_limit": [-0.3, 0.3],
+    #     }
+    # )
+    # ang_vel_cmd_levels = CurrTerm(
+    #     func=mdp.ang_vel_cmd_levels,
+    #     params={
+    #         "reward_term_name": "track_ang_vel_z_exp",
+    #         "ang_vel_z_limit": [-0.2, 0.2],
+    #     }
+    # )
 
 @configclass
 class MotionDataCfg:
@@ -373,7 +405,7 @@ class LocomotionAmpEnvCfg(ManagerBasedAmpEnvCfg):
     """Configuration for the AMP locomotion environment."""
 
     # scene
-    scene: AmpSceneCfg = AmpSceneCfg(num_envs=4096, env_spacing=2.5)
+    scene: AmpSceneCfg = AmpSceneCfg(num_envs=1024, env_spacing=2.5)
     # Basic settings
     observations: AmpObservationsCfg = AmpObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
