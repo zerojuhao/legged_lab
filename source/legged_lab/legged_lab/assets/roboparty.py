@@ -19,7 +19,7 @@ from legged_lab import LEGGED_LAB_ROOT_DIR
 
 ATOM01_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{LEGGED_LAB_ROOT_DIR}/data/Robots/Roboparty/atom01_description/atom01.usd",
+        usd_path=f"{LEGGED_LAB_ROOT_DIR}/data/Robots/atom01/atom01.usd",
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,

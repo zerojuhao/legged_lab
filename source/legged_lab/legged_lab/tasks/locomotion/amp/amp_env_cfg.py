@@ -58,7 +58,6 @@ MOTIONDATA_DOF_NAMES = [
 ]
 
 
-
 @configclass
 class AmpSceneCfg(InteractiveSceneCfg):
     """Configuration for the terrain scene with a legged robot."""
@@ -186,7 +185,7 @@ class AmpObservationsCfg():
         height_scan = ObsTerm(
             func=mdp.height_scan_ch,
             params={"sensor_cfg": SceneEntityCfg("height_scanner")},
-            noise=Unoise(n_min=-0.1, n_max=0.1),
+            noise=Gnoise(mean=0.0, std=0.05),
             clip=(-1.0, 1.0),
         )
         
@@ -203,13 +202,13 @@ class AmpObservationsCfg():
         base_pos_z: ObsTerm = ObsTerm(func=mdp.base_pos_z)  # TODO: consider terrain height
         dof_pos: ObsTerm = ObsTerm(func=mdp.joint_pos)
         dof_vel: ObsTerm = ObsTerm(func=mdp.joint_vel)
-        key_links_pos_b: ObsTerm = ObsTerm(
-            func=mdp.key_links_pos_b, 
-            params={
-                "asset_cfg": SceneEntityCfg("robot"), 
-                "local_pos_dict": MISSING,
-            }
-        )
+        # key_links_pos_b: ObsTerm = ObsTerm(
+        #     func=mdp.key_links_pos_b, 
+        #     params={
+        #         "asset_cfg": SceneEntityCfg("robot"), 
+        #         "local_pos_dict": MISSING,
+        #     }
+        # )
     
         def __post_init__(self):
             self.enable_corruption = False
@@ -244,7 +243,7 @@ class EventCfg:
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="base"),
+            "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
             "mass_distribution_params": (-1.0, 3.0),
             "operation": "add",
         },
@@ -255,7 +254,7 @@ class EventCfg:
         func=mdp.apply_external_force_torque,
         mode="reset",
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="base"),
+            "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
             "force_range": (0.0, 0.0),
             "torque_range": (-0.0, 0.0),
         },
@@ -265,14 +264,14 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (-1, 1), "y": (-1, 1), "yaw": (-0.3, 0.3)},
             "velocity_range": {
-                "x": (-0.5, 0.5),
-                "y": (-0.5, 0.5),
-                "z": (-0.5, 0.5),
-                "roll": (-0.5, 0.5),
-                "pitch": (-0.5, 0.5),
-                "yaw": (-0.5, 0.5),
+                "x": (-0.3, 0.3),
+                "y": (-0.3, 0.3),
+                "z": (-0.3, 0.3),
+                "roll": (-0.3, 0.3),
+                "pitch": (-0.3, 0.3),
+                "yaw": (-0.3, 0.3),
             },
         },
     )
@@ -282,7 +281,7 @@ class EventCfg:
     #     mode="reset",
     #     params={
     #         "position_range": (1.0, 1.0),
-    #         "velocity_range": (-1.0, 1.0),
+    #         "velocity_range": (-0.1, 0.1),
     #     },
     # )
     
@@ -325,7 +324,7 @@ class RewardsCfg:
         func=mdp.feet_air_time,
         weight=0,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll_link"),
             "command_name": "base_velocity",
             "threshold": 0.5,
         },
@@ -333,7 +332,7 @@ class RewardsCfg:
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=0,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*THIGH"), "threshold": 1.0},
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*thigh_roll_link"), "threshold": 1.0},
     )
     # -- optional penalties
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=0.0)
@@ -348,7 +347,7 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     base_contact = DoneTerm(
         func=mdp.illegal_contact,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), "threshold": 1.0},
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base_link"), "threshold": 1.0},
     )
     base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.2})
     bad_orientation = DoneTerm(
