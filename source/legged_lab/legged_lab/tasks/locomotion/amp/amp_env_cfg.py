@@ -404,7 +404,7 @@ class LocomotionAmpEnvCfg(ManagerBasedAmpEnvCfg):
     """Configuration for the AMP locomotion environment."""
 
     # scene
-    scene: AmpSceneCfg = AmpSceneCfg(num_envs=1024, env_spacing=2.5)
+    scene: AmpSceneCfg = AmpSceneCfg(num_envs=4096, env_spacing=2.5)
     # Basic settings
     observations: AmpObservationsCfg = AmpObservationsCfg()
     actions: ActionsCfg = ActionsCfg()

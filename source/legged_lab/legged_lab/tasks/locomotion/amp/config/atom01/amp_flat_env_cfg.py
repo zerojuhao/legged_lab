@@ -205,7 +205,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Curriculum
         # ------------------------------------------------------
-        self.curriculum.terrain_levels = None
+        # self.curriculum.terrain_levels = None
         
         # ------------------------------------------------------
         # Rewards
