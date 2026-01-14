@@ -1,4 +1,5 @@
 from __future__ import annotations
+from math import e
 
 import torch
 from prettytable import PrettyTable
@@ -15,11 +16,11 @@ from .motion_data_manager import MotionDataTerm
 
 if TYPE_CHECKING:
     from legged_lab.envs import ManagerBasedAnimationEnv
-
+    
 class AnimationTerm(ManagerTermBase):
     cfg: AnimationTermCfg
     _env: ManagerBasedAnimationEnv
-    
+
     def __init__(self, cfg: AnimationTermCfg, env: ManagerBasedAnimationEnv):
         super().__init__(cfg, env)
         
@@ -78,7 +79,14 @@ class AnimationTerm(ManagerTermBase):
             return
         
         # resample motion ids for the reset envs
-        self.motion_ids[env_ids] = self.motion_data_term.sample_motions(len(env_ids))
+        # 在reset时使用velocity_blend_ratio=1.0，完全依赖commands
+        commands = self._env.command_manager.get_command("base_velocity")
+        motion_ids = self.motion_data_term.sample_motions_conditioned(
+            commands[env_ids], 
+            env_ids,
+            velocity_blend_ratio=self.cfg.velocity_blend_ratio
+        )
+        self.motion_ids[env_ids] = motion_ids
         self.motion_durations[env_ids] = self.motion_data_term.get_motion_durations(self.motion_ids[env_ids])
         
         truncate_time = self.num_steps * self._env.step_dt
@@ -97,7 +105,35 @@ class AnimationTerm(ManagerTermBase):
         self._fetch_motion_data(env_ids)
 
     def update(self, dt: float):
-        if self.cfg.random_fetch:
+        # 如果启用了实时重采样motion_ids
+        if self.cfg.resample_motion_on_update:
+            commands = self._env.command_manager.get_command("base_velocity")
+            all_env_ids = torch.arange(self.num_envs, device=self._env.device)
+            # print("Resampling motion ids based on current commands...")
+            # 使用velocity_blend_ratio混合当前速度和目标commands
+            # 这样采样会更倾向于与当前状态相近的motion，使过渡更平滑
+            motion_ids = self.motion_data_term.sample_motions_conditioned(
+                commands,
+                all_env_ids,
+                velocity_blend_ratio=self.cfg.velocity_blend_ratio
+            )
+            self.motion_ids[:] = motion_ids
+            self.motion_durations[:] = self.motion_data_term.get_motion_durations(self.motion_ids)
+            
+            # 重新采样时间起点
+            truncate_time = self.num_steps * dt
+            if self.cfg.num_steps_to_use > 0:
+                self.motion_fetch_time[:, 0] = self.motion_data_term.sample_times(
+                    self.motion_ids, truncate_time_end=truncate_time
+                )
+            else:
+                self.motion_fetch_time[:, 0] = self.motion_data_term.sample_times(
+                    self.motion_ids, truncate_time_start=truncate_time
+                )
+            if self.num_steps > 1:
+                self.motion_fetch_time[:, 1:] = self.motion_fetch_time[:, 0:1] + self.step_indices[1:].float() * dt
+        
+        elif self.cfg.random_fetch:
             if self.cfg.num_steps_to_use > 0:
                 self.motion_fetch_time[:, 0] = self.motion_data_term.sample_times(self.motion_ids, truncate_time_end=self.num_steps * dt)
             else: 

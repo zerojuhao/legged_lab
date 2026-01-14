@@ -17,6 +17,9 @@ class ManagerBasedAnimationEnv(ManagerBasedRLEnv):
         super().__init__(cfg=cfg, render_mode=render_mode, **kwargs)
     
     def load_managers(self):
+        # -- command manager
+        self.command_manager: CommandManager = CommandManager(self.cfg.commands, self)
+        print("[INFO] Command Manager: ", self.command_manager)
         self.motion_data_manager = MotionDataManager(self.cfg.motion_data, self)
         print("[INFO] Motion Data Manager: ", self.motion_data_manager)
         self.animation_manager = AnimationManager(self.cfg.animation, self)

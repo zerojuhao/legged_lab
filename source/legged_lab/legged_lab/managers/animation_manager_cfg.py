@@ -28,6 +28,15 @@ class AnimationTermCfg:
     random_fetch: bool = False
     """Whether to randomly fetch the motion data at each step."""
     
+    resample_motion_on_update: bool = False
+    """Whether to resample motion_ids during update based on current velocity and commands.
+    This allows gradual transition from current motion to target motion."""
+    
+    velocity_blend_ratio: float = 0.5
+    """Blend ratio between current velocity and target commands for motion sampling.
+    0.0 = use only current velocity, 1.0 = use only commands.
+    A value like 0.5 will average current velocity and commands."""
+    
     enable_visualization: bool = True
     """Whether to enable visualization for this animation term."""
     

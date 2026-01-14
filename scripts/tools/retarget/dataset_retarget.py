@@ -31,25 +31,25 @@ parser = argparse.ArgumentParser(description="Batch retarget GMR -> Legged Lab (
 parser.add_argument(
     "--robot",
     type=str,
-    default="g1",
-    help="Robot name to use (default: g1)",
+    default="atom01", 
+    help="Robot name to use (default: atom01)",
 )
 parser.add_argument(
     "--input_dir",
     type=str,
-    required=True,
+    default="source/legged_lab/legged_lab/data/MotionData/atom01_long_gmr",
     help="Directory containing input GMR .pkl files",
 )
 parser.add_argument(
     "--output_dir",
     type=str,
-    required=True,
+    default="source/legged_lab/legged_lab/data/MotionData/atom01_long_lab",
     help="Directory to write converted .pkl files",
 )
 parser.add_argument(
     "--config_file",
     type=str,
-    required=True,
+    default="scripts/tools/retarget/config/atom01.yaml",
     help="Path to YAML config containing gmr_dof_names, lab_dof_names, lab_key_body_names",
 )
 parser.add_argument(
@@ -78,6 +78,8 @@ from isaaclab.scene import InteractiveScene
 # load robot cfg as single_retarget does
 if args_cli.robot == "g1":
     from legged_lab.assets.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
+elif args_cli.robot == "atom01":
+    from legged_lab.assets.roboparty import ATOM01_LONG_CFG as ROBOT_CFG
 else:
     raise ValueError(f"Robot {args_cli.robot} not supported.")
 

@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 import os
-import numpy as np
 import enum
 import joblib
 import torch
 from prettytable import PrettyTable
 from typing import TYPE_CHECKING
+from collections.abc import Sequence
 
 import isaaclab.utils.math as math_utils
-import isaaclab.utils.string as string_utils
-from isaaclab.assets import Articulation
+from isaaclab.assets import RigidObject
 
 from isaaclab.managers import ManagerBase, ManagerTermBase
 from .motion_data_term_cfg import MotionDataTermCfg
 
 if TYPE_CHECKING:
-    from isaaclab.envs import ManagerBasedEnv
+    from isaaclab.envs import ManagerBasedEnv, ManagerBasedRLEnv
 
 from legged_lab.utils.math import vel_forward_diff, ang_vel_from_quat_diff, quat_slerp, linear_interpolate, calc_frame_blend
 
@@ -30,6 +29,7 @@ class MotionDataTerm(ManagerTermBase):
     
     cfg: MotionDataTermCfg
     _env: ManagerBasedEnv
+    env: ManagerBasedRLEnv
 
     def __init__(self, cfg: MotionDataTermCfg, env: ManagerBasedEnv):
         super().__init__(cfg, env)
@@ -38,6 +38,12 @@ class MotionDataTerm(ManagerTermBase):
             f"Motion data directory {cfg.motion_data_dir} does not exist."
             
         self._load_motion_data()
+        
+        # Initialize sample buffer
+        self._sample_buffer_motion_ids = None
+        self._sample_buffer_times = None
+        self._sample_buffer_cursor = 0
+        self._build_sample_buffer()
         
     def _load_motion_data(self):
         # list the motion data files in the directory
@@ -136,6 +142,13 @@ class MotionDataTerm(ManagerTermBase):
         self.motion_loop_modes = torch.tensor(self.motion_loop_modes, dtype=torch.int32, device=self.device)
         # Get the normalized motion weights
         self.motion_weights = torch.tensor(self.motion_weights, dtype=torch.float32, device=self.device)
+        
+        # Adaptive weighting: Scale by sqrt(duration)
+        # This balances between "Motion Sampling" (equal probability per clip) 
+        # and "Frame Sampling" (equal probability per frame).
+        # It prevents short motions from being over-sampled frame-wise, 
+        # while ensuring they are not drowned out by long motions.
+        self.motion_weights = self.motion_weights * torch.sqrt(self.motion_durations)
         self.motion_weights = self.motion_weights / torch.sum(self.motion_weights)
         
         # Some other infomation
@@ -158,7 +171,39 @@ class MotionDataTerm(ManagerTermBase):
         lengths_shifted[0] = 0
         self.motion_start_indices = torch.cumsum(lengths_shifted, dim=0)
         
+        # Compute average velocity for each motion (in body frame)
+        # This is used for command-conditioned sampling
+        self._compute_motion_avg_velocities()
+        
         return
+    
+    def _compute_motion_avg_velocities(self):
+        """Compute average linear and angular velocity for each motion clip.
+        
+        The velocity is computed in the body frame for command matching.
+        """
+        num_motions = self.get_num_motions()
+        
+        # Shape: (num_motions, 3) for (vx, vy, vz)
+        self.motion_avg_lin_vel_b = torch.zeros(num_motions, 3, device=self.device)
+        # Shape: (num_motions,) for yaw rate (angular velocity around z-axis)
+        self.motion_avg_ang_vel_z = torch.zeros(num_motions, device=self.device)
+        
+        for i in range(num_motions):
+            start_idx = self.motion_start_indices[i].item()
+            end_idx = start_idx + self.motion_num_frames[i].item()
+            
+            # Get velocity in world frame
+            root_vel_w = self.root_vel_w[start_idx:end_idx]  # (num_frames, 3)
+            root_ang_vel_w = self.root_ang_vel_w[start_idx:end_idx]  # (num_frames, 3)
+            root_quat = self.root_quat[start_idx:end_idx]  # (num_frames, 4)
+            
+            # Transform linear velocity to body frame
+            root_vel_b = math_utils.quat_apply_inverse(root_quat, root_vel_w)
+            
+            # Compute average
+            self.motion_avg_lin_vel_b[i] = root_vel_b.mean(dim=0)
+            self.motion_avg_ang_vel_z[i] = root_ang_vel_w[:, 2].mean()  # z-component
          
     # Some helper functions
     
@@ -191,6 +236,64 @@ class MotionDataTerm(ManagerTermBase):
             int: The loop mode of the motion.
         """
         return self.motion_loop_modes[motion_ids]
+
+    def _build_sample_buffer(self):
+        """Pre-compute a shuffled buffer of (motion_id, time) pairs based on weights."""
+        # Use total frames as the baseline buffer size, but distribution follows weights
+        buffer_size = torch.sum(self.motion_num_frames).item()
+        
+        # Calculate how many samples each motion should have in the buffer based on weights
+        # counts = buffer_size * weights
+        counts = (buffer_size * self.motion_weights).long()
+        
+        # Adjust counts to match buffer_size exactly (distribute remainder)
+        diff = buffer_size - counts.sum().item()
+        if diff > 0:
+            # Add remainder to the motion with highest weight
+            counts[torch.argmax(self.motion_weights)] += diff
+            
+        # Allocate buffers
+        self._sample_buffer_motion_ids = torch.empty(buffer_size, dtype=torch.long, device=self.device)
+        self._sample_buffer_times = torch.empty(buffer_size, dtype=torch.float32, device=self.device)
+        
+        start_idx = 0
+        num_motions = self.get_num_motions()
+        
+        for i in range(num_motions):
+            count = counts[i].item()
+            if count <= 0:
+                continue
+                
+            n_frames = self.motion_num_frames[i].item()
+            dt = self.motion_dt[i].item()
+            duration = self.motion_durations[i].item()
+            
+            # Fill Motion IDs
+            self._sample_buffer_motion_ids[start_idx : start_idx + count] = i
+            
+            # Fill Times
+            # Randomly sample times for this motion 'count' times
+            # This implements over-sampling for high-weight short motions
+            # and under-sampling for low-weight long motions
+            
+            # Generate random phases [0, 1]
+            phases = torch.rand(count, device=self.device)
+            
+            # Convert to time, ensuring we don't exceed duration
+            # We use a small epsilon to avoid index out of bounds at the exact end
+            times = phases * (duration - 1e-6)
+            
+            self._sample_buffer_times[start_idx : start_idx + count] = times
+            
+            start_idx += count
+            
+        # Shuffle the entire buffer
+        perm = torch.randperm(buffer_size, device=self.device)
+        self._sample_buffer_motion_ids = self._sample_buffer_motion_ids[perm]
+        self._sample_buffer_times = self._sample_buffer_times[perm]
+        
+        self._sample_buffer_cursor = 0
+        # print(f"[MotionDataTerm] Built sample buffer with {total_frames} frames.")
         
     def sample_motions(self, n: int) -> torch.Tensor:
         """Sample a batch of motion IDs.
@@ -201,7 +304,28 @@ class MotionDataTerm(ManagerTermBase):
         Returns:
             torch.Tensor: A tensor of sampled motion IDs, shape (n,).
         """
-        motion_ids = torch.multinomial(self.motion_weights, num_samples=n, replacement=True)
+        ids_list = []
+        times_list = []
+        remaining = n
+        
+        while remaining > 0:
+            if self._sample_buffer_motion_ids is None or self._sample_buffer_cursor >= self._sample_buffer_motion_ids.shape[0]:
+                self._build_sample_buffer()
+            
+            available = self._sample_buffer_motion_ids.shape[0] - self._sample_buffer_cursor
+            take = min(remaining, available)
+            start = self._sample_buffer_cursor
+            end = start + take
+            
+            ids_list.append(self._sample_buffer_motion_ids[start:end])
+            times_list.append(self._sample_buffer_times[start:end])
+            
+            self._sample_buffer_cursor = end
+            remaining -= take
+            
+        motion_ids = torch.cat(ids_list)
+        self._last_sampled_times = torch.cat(times_list)
+        
         return motion_ids
         
     def sample_times(self, motion_ids: torch.Tensor, truncate_time_start: float = None, truncate_time_end: float = None):
@@ -242,6 +366,426 @@ class MotionDataTerm(ManagerTermBase):
         sample_times = time_start + phase * valid_range
         
         return sample_times
+
+    def fa(
+        self,
+        velocity: torch.Tensor,
+    ) -> torch.Tensor:
+        """支持 2D (n, 3) 或 3D (n, m, 3) 张量"""
+        esp = 1e-3
+        x = velocity[..., 0].abs()
+        y = velocity[..., 1].abs()
+        z = velocity[..., 2].abs()
+        value = y*z / (x + esp) + x*z / (y + esp) + x*y / (z + esp)
+        return value
+    
+    def fb(
+        self,
+        velocity: torch.Tensor,
+    ) -> torch.Tensor:
+        """支持 2D (n, 3) 或 3D (n, m, 3) 张量"""
+        esp = 1e-3
+        x = velocity[..., 0].abs()
+        y = velocity[..., 1].abs()
+        z = velocity[..., 2].abs()
+        value = y*z / (x + esp) * x*z / (y + esp) * x*y / (z + esp)
+        return value
+
+    def cosine_distance(
+        self,
+        commands: torch.Tensor,
+        motion_vel: torch.Tensor,
+        eps: float = 1e-6,
+    ) -> torch.Tensor:
+        """计算余弦距离矩阵
+        
+        Args:
+            commands: (n, 3)
+            motion_vel: (m, 3)
+        Returns:
+            (n, m) 余弦距离矩阵
+        """
+        # 矩阵乘法计算所有点积
+
+        dot_product = torch.matmul(commands, motion_vel.t())  # (n, m)
+        commands_norm = torch.norm(commands, dim=1, keepdim=True)  # (n, 1)
+        motion_vel_norm = torch.norm(motion_vel, dim=1, keepdim=True)
+        norms_product = torch.matmul(commands_norm, motion_vel_norm.t())  # (n, m)
+        cosine_similarity = dot_product / (norms_product + eps)  # (n, m)
+        cosine_distance = 1.0 - cosine_similarity  # (n, m)
+        return cosine_distance
+    
+    def vel_diff(
+        self,
+        commands: torch.Tensor,
+        motion_vel: torch.Tensor,
+        env_ids: Sequence[int] | None = None,
+        velocity_blend_ratio: float = 1.0,
+    ) -> torch.Tensor:
+        """计算速度差异矩阵
+        
+        Args:
+            commands: 目标速度命令 (n, 3)
+            motion_vel: 动作数据的平均速度 (m, 3)
+            env_ids: 环境ID
+            velocity_blend_ratio: 当前速度和目标命令的混合比例
+                0.0 = 完全使用当前速度
+                1.0 = 完全使用目标命令
+                0.5 = 当前速度和目标命令的平均
+        """
+        asset: RigidObject = self._env.scene["robot"]
+        root_lin_vel = asset.data.root_lin_vel_b[env_ids, :2]
+        root_ang_vel = asset.data.root_ang_vel_b[env_ids, 2]
+        root_vel = torch.cat([root_lin_vel, root_ang_vel.unsqueeze(1)], dim=1)
+        # print("root_vel:", root_vel)
+        # 根据blend ratio混合当前速度和目标命令
+        # velocity_blend_ratio = 1.0 时，完全使用commands
+        # velocity_blend_ratio = 0.0 时，完全使用当前速度
+        # velocity_blend_ratio = 0.5 时，取平均
+        blended_target = (1.0 - velocity_blend_ratio) * root_vel + velocity_blend_ratio * commands
+        # 计算方向mask：只考虑同方向分量
+        # commands/motion_vel: (n, 3)/(m, 3)
+        cmd_sign = torch.sign(commands)  # (n, 3)
+        motion_sign = torch.sign(motion_vel)  # (m, 3)
+        cmd_sign_exp = cmd_sign.unsqueeze(1)  # (n, 1, 3)
+        motion_sign_exp = motion_sign.unsqueeze(0)  # (1, m, 3)
+        match_mask = (cmd_sign_exp == motion_sign_exp).all(dim=2)  # (n, m)
+
+        # 构造mask: (n, m, 3)，同方向分量为True
+        direction_mask = (cmd_sign_exp == motion_sign_exp)  # (n, m, 3)
+
+        # 计算差异
+        diff_all = torch.norm(blended_target.unsqueeze(1) - motion_vel.unsqueeze(0), dim=2)  # (n, m)
+        # 只考虑同方向分量
+        diff_dir = torch.norm((blended_target.unsqueeze(1) - motion_vel.unsqueeze(0)) * direction_mask.float(), dim=2)
+
+        # 匹配项用同方向分量差异，非匹配项用全向差异
+        diff = torch.where(match_mask, diff_dir, diff_all)
+        return diff
+        
+
+    def sample_motions_conditioned(
+        self, 
+        commands: torch.Tensor,
+        env_ids: Sequence[int] | None = None,
+        min_prob: float = 0.001,
+        velocity_blend_ratio: float | None = 1.0,
+    ) -> torch.Tensor:
+        """根据速度命令条件采样motion IDs
+        
+        Args:
+            commands: 目标速度命令
+            env_ids: 环境ID
+            min_prob: 每个motion的最小采样概率
+            velocity_blend_ratio: 当前速度和目标命令的混合比例 (0.0-1.0)
+        """
+        if env_ids is None:
+            return
+        esp = 1e-3
+        num_motions = self.get_num_motions()
+        cmd_vx = commands[:, 0]  # (n,)
+        cmd_vy = commands[:, 1]  # (n,)
+        cmd_ang_z = commands[:, 2].unsqueeze(1)  # (n,)
+    
+        # Motion velocity components: (num_motions, 3)
+        motion_vx = self.motion_avg_lin_vel_b[:, 0]  # (num_motions,)
+        motion_vy = self.motion_avg_lin_vel_b[:, 1]  # (num_motions,)
+        motion_ang_z = self.motion_avg_ang_vel_z     # (num_motions,)
+        
+        # 过滤掉微小速度，避免噪声影响
+        cmd_vx = torch.where(torch.abs(cmd_vx) < 0.2, 0, cmd_vx)
+        cmd_vy = torch.where(torch.abs(cmd_vy) < 0.2, 0, cmd_vy)
+        cmd_ang_z = torch.where(torch.abs(cmd_ang_z) < 0.2, 0, cmd_ang_z)
+        commands = torch.where(torch.abs(commands) < 0.2, 0, commands)
+    
+        motion_vx = torch.where(torch.abs(motion_vx) < 0.2, 0, motion_vx)
+        motion_vy = torch.where(torch.abs(motion_vy) < 0.2, 0, motion_vy)
+        motion_ang_z = torch.where(torch.abs(motion_ang_z) < 0.2, 0, motion_ang_z)
+
+        # motion_vy = motion_vy * 2
+
+        motion_vel = torch.stack([motion_vx, motion_vy, motion_ang_z], dim=1)  # (num_motions, 3)
+        
+        # ========== 1. 方向一致性匹配过滤 ========== 
+        # 只有与命令速度方向完全一致的数据集视为匹配
+        cmd_sign = torch.sign(commands)  # (n, 3)
+        motion_sign = torch.sign(motion_vel)  # (m, 3)
+        cmd_sign_exp = cmd_sign.unsqueeze(1)  # (n, 1, 3)
+        motion_sign_exp = motion_sign.unsqueeze(0)  # (1, m, 3)
+        # 仅方向完全一致视为匹配
+        match_mask = (cmd_sign_exp == motion_sign_exp).all(dim=2)  # (n, m)
+
+        # ========== 2. 基于速度距离分配概率 ========== 
+        vel_dist = self.vel_diff(commands, motion_vel, env_ids, velocity_blend_ratio)  # (n, m)
+        scale = 3.0  # 可调参数
+        similarities = torch.exp(-vel_dist * scale)  # 距离越小，相似度越高
+        # print("similarities before mask:", similarities)
+        # 概率分配：
+        # 匹配项直接用相似度，非匹配项也用相似度但缩小权重
+        mismatch_scale = 0.001
+        similarities = torch.where(
+            match_mask,
+            similarities,
+            similarities * mismatch_scale
+        )
+
+        # 概率归一化
+        similarities_sum = similarities.sum(dim=1, keepdim=True).clamp(min=1e-8)
+        probs = similarities / similarities_sum
+
+        # 严格兜底：所有 motion 概率至少为 min_prob，总和为1
+        num_motions = probs.shape[1]
+        min_total = min_prob * num_motions
+        mask = probs < min_prob
+        remain = 1.0 - min_total
+        probs_remain_sum = torch.sum(torch.where(mask, torch.zeros_like(probs), probs), dim=1, keepdim=True)
+        all_mask = mask.all(dim=1)
+        probs_scaled = torch.where(
+            mask,
+            min_prob,
+            probs * (remain / (probs_remain_sum + 1e-8))
+        )
+        uniform_probs = torch.ones_like(probs) / num_motions
+        probs = torch.where(
+            all_mask.unsqueeze(1),
+            uniform_probs,
+            probs_scaled
+        )
+
+        # 处理 NaN 和 Inf
+        probs = torch.where(torch.isnan(probs), torch.ones_like(probs) / num_motions, probs)
+        probs = torch.where(torch.isinf(probs), torch.ones_like(probs) / num_motions, probs)
+
+        # Sample motion IDs based on probabilities
+        motion_ids = torch.multinomial(probs, num_samples=1).squeeze(-1)  # (n,)
+
+        # Debug output
+        # print("========== 综合相似度计算 ==========")
+        # print(f"env_ids: {env_ids}")
+        # print(f"root lin velocity: {self._env.scene['robot'].data.root_lin_vel_b[env_ids]}")
+        # print(f"root ang velocity: {self._env.scene['robot'].data.root_ang_vel_b[env_ids]}")
+        # print(f"commands: {commands}")
+        # print(f"motion_vel: {motion_vel}")
+        # print(f"match_mask: {match_mask}")
+        # print(f"vel_dist: {vel_dist}")
+        # print(f"similarities: {similarities}")
+        # print(f"probs: {probs}")
+        # print(f"motion_ids: {motion_ids}")
+        
+        return motion_ids
+    
+    
+    
+    # def sample_motions_conditioned(
+    #     self, 
+    #     commands: torch.Tensor,
+    #     min_prob: float = 0.001,
+    # ) -> torch.Tensor:
+    #     """Sample motion IDs conditioned on velocity commands.``
+        
+    #     The algorithm considers:
+    #     1. Direction consistency: motion should match the sign of non-zero command components
+    #     2. Magnitude similarity: prefer motions with similar speed magnitude
+    #     3. Unwanted motion penalty: penalize motion components that command doesn't request
+    #     """
+    #     num_motions = self.get_num_motions()
+    #     n = commands.shape[0]
+        
+    #     cmd_vx = commands[:, 0]  # (n,)
+    #     cmd_vy = commands[:, 1]  # (n,)
+    #     cmd_ang_z = commands[:, 2]  # (n,)
+        
+    #     # Motion velocity components
+    #     motion_vx = self.motion_avg_lin_vel_b[:, 0]  # (num_motions,)
+    #     motion_vy = self.motion_avg_lin_vel_b[:, 1]  # (num_motions,)
+    #     motion_ang_z = self.motion_avg_ang_vel_z     # (num_motions,)
+        
+    #     # Threshold for considering a velocity as "active"
+    #     thresh = 0.1
+        
+    #     # Expand for broadcasting: cmd (n, 1), motion (1, num_motions)
+    #     cmd_vx_exp = cmd_vx.unsqueeze(1)  # (n, 1)
+    #     cmd_vy_exp = cmd_vy.unsqueeze(1)
+    #     cmd_ang_z_exp = cmd_ang_z.unsqueeze(1)
+        
+    #     motion_vx_exp = motion_vx.unsqueeze(0)  # (1, num_motions)
+    #     motion_vy_exp = motion_vy.unsqueeze(0)
+    #     motion_ang_z_exp = motion_ang_z.unsqueeze(0)
+        
+    #     # Check if command components are "active" (non-zero)
+    #     cmd_vx_active = torch.abs(cmd_vx_exp) > thresh  # (n, 1)
+    #     cmd_vy_active = torch.abs(cmd_vy_exp) > thresh
+    #     cmd_ang_z_active = torch.abs(cmd_ang_z_exp) > thresh
+        
+    #     # Check if motion components are "active"
+    #     motion_vx_active = torch.abs(motion_vx_exp) > thresh  # (1, num_motions)
+    #     motion_vy_active = torch.abs(motion_vy_exp) > thresh
+    #     motion_ang_z_active = torch.abs(motion_ang_z_exp) > thresh
+        
+    #     # ========== Direction Consistency ==========
+    #     # If command is active, motion should have same sign
+    #     # sign_match = 1 if same sign, -1 if opposite, 0 if either is zero
+    #     sign_vx = torch.sign(cmd_vx_exp) * torch.sign(motion_vx_exp)  # (n, num_motions)
+    #     sign_vy = torch.sign(cmd_vy_exp) * torch.sign(motion_vy_exp)
+    #     sign_ang_z = torch.sign(cmd_ang_z_exp) * torch.sign(motion_ang_z_exp)
+        
+    #     # Direction penalty: -1 for wrong direction, 0 for correct or inactive
+    #     dir_penalty_vx = torch.where(cmd_vx_active & (sign_vx < 0), -10.0, 0.0)
+    #     dir_penalty_vy = torch.where(cmd_vy_active & (sign_vy < 0), -10.0, 0.0)
+    #     dir_penalty_ang = torch.where(cmd_ang_z_active & (sign_ang_z < 0), -10.0, 0.0)
+        
+    #     # ========== Unwanted Motion Penalty ==========
+    #     # If command component is zero but motion has it, penalize
+    #     unwanted_vx = torch.where(~cmd_vx_active & motion_vx_active, 
+    #                                -torch.abs(motion_vx_exp) * 5.0, 0.0)
+    #     unwanted_vy = torch.where(~cmd_vy_active & motion_vy_active, 
+    #                                -torch.abs(motion_vy_exp) * 5.0, 0.0)
+    #     unwanted_ang = torch.where(~cmd_ang_z_active & motion_ang_z_active, 
+    #                                 -torch.abs(motion_ang_z_exp) * 5.0, 0.0)
+        
+    #     # ========== Magnitude Similarity ==========
+    #     # For active command components, reward similar magnitude
+    #     mag_diff_vx = torch.where(cmd_vx_active, 
+    #                                -(cmd_vx_exp - motion_vx_exp)**2, 0.0)
+    #     mag_diff_vy = torch.where(cmd_vy_active, 
+    #                                -(cmd_vy_exp - motion_vy_exp)**2, 0.0)
+    #     mag_diff_ang = torch.where(cmd_ang_z_active, 
+    #                                 -(cmd_ang_z_exp - motion_ang_z_exp)**2, 0.0)
+        
+    #     # ========== Missing Motion Penalty ==========
+    #     # If command requests motion but motion doesn't have it, penalize
+    #     missing_vx = torch.where(cmd_vx_active & ~motion_vx_active, -5.0, 0.0)
+    #     missing_vy = torch.where(cmd_vy_active & ~motion_vy_active, -5.0, 0.0)
+    #     missing_ang = torch.where(cmd_ang_z_active & ~motion_ang_z_active, -5.0, 0.0)
+        
+    #     # ========== Combine Scores ==========
+    #     similarities = (dir_penalty_vx + dir_penalty_vy + dir_penalty_ang +
+    #                    unwanted_vx + unwanted_vy + unwanted_ang +
+    #                    mag_diff_vx + mag_diff_vy + mag_diff_ang +
+    #                    missing_vx + missing_vy + missing_ang) * 5
+        
+    #     # Compute command-matched probabilities via softmax
+    #     matched_probs = torch.softmax(similarities, dim=1)  # (n, num_motions)
+        
+    #     # Create uniform distribution for minimum coverage
+    #     uniform_probs = torch.ones(num_motions, device=self.device) / num_motions
+        
+    #     # Mix with uniform to ensure minimum probability for each motion
+    #     total_min = min(min_prob * num_motions, 0.9)
+    #     probs = (1.0 - total_min) * matched_probs + total_min * uniform_probs.unsqueeze(0)
+        
+    #     # Normalize
+    #     probs = probs / probs.sum(dim=1, keepdim=True)
+        
+    #     # Sample motion IDs
+    #     motion_ids = torch.multinomial(probs, num_samples=1).squeeze(-1)
+        
+    #     # Debug output
+    #     # print("========== Motion Sampling Debug ==========")
+    #     # print(f"cmd: vx={cmd_vx}, vy={cmd_vy}, ang_z={cmd_ang_z}")
+    #     # print(f"similarities: {similarities}")
+    #     # print(f"probs: {probs}")
+    #     # print(f"motion_ids: {motion_ids}")
+        
+    #     return motion_ids
+    
+    
+    # def sample_motions_conditioned(
+    #     self, 
+    #     commands: torch.Tensor,
+    #     temperature: float = 0.1,  # 降低 temperature，使概率分布更尖锐
+    #     min_prob: float = 0.01,
+    # ) -> tuple[torch.Tensor, torch.Tensor]:
+    #     n = commands.shape[0]
+    #     num_motions = self.get_num_motions()
+        
+    #     # Extract command components: vx, vy, ang_z
+    #     cmd_vx = commands[:, 0]  # (n,)
+    #     cmd_vy = commands[:, 1]  # (n,)
+    #     cmd_ang_z = commands[:, 2]  # (n,)
+        
+    #     # Motion velocity components
+    #     motion_vx = self.motion_avg_lin_vel_b[:, 0]  # (num_motions,)
+    #     motion_vy = self.motion_avg_lin_vel_b[:, 1]  # (num_motions,)
+    #     motion_ang_z = self.motion_avg_ang_vel_z     # (num_motions,)
+        
+    #     # ========== 综合相似度计算 ==========
+    #     # 分解为：线速度向量差 + 角速度大小
+        
+    #     # ----- 1. 线速度向量差 (同时考虑大小和方向) -----
+    #     # 先计算 vx, vy 的差值，再平方求和，最后归一化
+    #     vx_diff = cmd_vx.unsqueeze(1) - motion_vx.unsqueeze(0)  # (n, num_motions)
+    #     vy_diff = cmd_vy.unsqueeze(1) - motion_vy.unsqueeze(0)  # (n, num_motions)
+        
+    #     # 向量差的 L2 距离平方
+    #     speed_dist = vx_diff ** 2 + vy_diff ** 2  # (n, num_motions)
+        
+    #     # ----- 2. 角速度大小 -----
+    #     ang_diff = (cmd_ang_z.unsqueeze(1) - motion_ang_z.unsqueeze(0))
+    #     ang_dist = ang_diff ** 2  # 角速度距离
+        
+    #     # ----- 归一化：使 speed_dist 和 ang_dist 量级一致 -----
+    #     # 分别除以各自的最大值，使两者都在 [0, 1] 范围内
+    #     speed_dist_max = torch.max(speed_dist).clamp(min=1e-6)
+    #     ang_dist_max = torch.max(ang_dist).clamp(min=1e-6)
+        
+    #     speed_dist_norm = speed_dist / speed_dist_max  # [0, 1]
+    #     ang_dist_norm = ang_dist / ang_dist_max  # [0, 1]
+        
+    #     # ----- 综合距离 -----
+    #     total_distance = speed_dist_norm + ang_dist_norm * 2
+    #     # 方法：使用 1 / (rank ^ power) 作为权重
+        
+    #     # 获取每个命令的排名（距离从小到大）
+    #     ranks = torch.argsort(torch.argsort(total_distance, dim=1), dim=1) + 1  # rank从1开始
+    #     ranks = ranks.float()
+        
+    #     # 使用幂律分布：权重 = 1 / rank^power
+    #     # power 越大，top-1 的优势越明显
+    #     power = 3.0  # 可调参数：2.0 较温和，4.0 更极端
+        
+    #     rank_weights = 1.0 / (ranks ** power)  # (n, num_motions)
+        
+    #     # 同时考虑距离本身的影响（指数衰减）
+    #     # 距离越小，权重越大
+    #     eps = 1e-6
+    #     distance_weights = torch.exp(-total_distance * 10.0)  # 衰减系数可调
+        
+    #     # 综合权重 = 排名权重 × 距离权重
+    #     combined_weights = rank_weights * distance_weights
+        
+    #     # 归一化为概率
+    #     matched_probs = combined_weights / combined_weights.sum(dim=1, keepdim=True)
+        
+    #     # Create uniform distribution for minimum coverage
+    #     uniform_probs = torch.ones(num_motions, device=self.device) / num_motions  # (num_motions,)
+        
+    #     # Mix: (1 - min_prob * num_motions) * matched + min_prob for each
+    #     # This ensures each motion has at least min_prob probability
+    #     # total_min = min_prob * num_motions should be < 1.0
+    #     total_min = min(min_prob * num_motions, 0.9)  # cap at 90% uniform
+        
+    #     # Final probability = (1 - total_min) * matched_probs + total_min * uniform_probs
+    #     probs = (1.0 - total_min) * matched_probs + total_min * uniform_probs.unsqueeze(0)
+        
+    #     # Normalize (should already sum to 1, but ensure numerical stability)
+    #     probs = probs / probs.sum(dim=1, keepdim=True)
+        
+    #     # Sample motion IDs based on probabilities
+    #     motion_ids = torch.multinomial(probs, num_samples=1).squeeze(-1)  # (n,)
+    #     # # Debug info
+    #     # print("========== 综合相似度计算 ==========")
+    #     # print(f"cmd: vx={cmd_vx}, vy={cmd_vy}, ang_z={cmd_ang_z}")
+    #     # print(f"motion: vx={motion_vx}, vy={motion_vy}, ang_z={motion_ang_z}")
+    #     # print(f"speed_dist (原始): {speed_dist}, max={speed_dist_max}")
+    #     # print(f"ang_dist (原始): {ang_dist}, max={ang_dist_max}")
+    #     # print(f"speed_dist_norm: {speed_dist_norm}")
+    #     # print(f"ang_dist_norm: {ang_dist_norm}")
+    #     # print(f"total_distance: {total_distance}")
+    #     # print("probs:", probs)
+    #     # print("motion_ids:", motion_ids)
+    #     return motion_ids
+        
         
     def calc_motion_phase(self, motion_ids, times):
         motion_durations = self.motion_durations[motion_ids]
@@ -394,6 +938,13 @@ class MotionDataManager(ManagerBase):
             raise KeyError(f"Motion data term '{term_name}' not found.")
         return self._terms[term_name]
 
+    def get_term_weights(self) -> dict[str, float]:
+        """Get the weights of the motion data terms."""
+        term_weights = {}
+        for term_name, term in self._terms.items():
+            term_weights[term_name] = term.cfg.weight
+        return term_weights
+    
     """
     Helper functions.
     """

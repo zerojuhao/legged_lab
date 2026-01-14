@@ -142,6 +142,27 @@ def ref_root_ang_vel_b(
         return ref_root_ang_vel
     
 
+def ref_root_lin_vel_b(
+    env: ManagerBasedAnimationEnv, 
+    animation: str, 
+    flatten_steps_dim: bool = True,
+) -> torch.Tensor:
+    
+    animation_term: AnimationTerm = env.animation_manager.get_term(animation)
+    num_envs = env.num_envs
+    
+    ref_root_lin_vel_w = animation_term.get_root_vel_w()  # shape: (num_envs, num_steps, 3)
+    ref_root_quat = animation_term.get_root_quat()  # shape: (num_envs, num_steps, 4)
+    ref_root_lin_vel = math_utils.quat_apply_inverse(
+        ref_root_quat, ref_root_lin_vel_w
+    )
+    
+    if flatten_steps_dim:
+        return ref_root_lin_vel.reshape(num_envs, -1)
+    else:
+        return ref_root_lin_vel
+    
+    
 def ref_joint_pos(
     env: ManagerBasedAnimationEnv, 
     animation: str, 
@@ -188,6 +209,27 @@ def ref_key_body_pos_b(
         num_envs = ref_key_body_pos_b.shape[0]
         num_steps = ref_key_body_pos_b.shape[1]
         return ref_key_body_pos_b.reshape(num_envs, num_steps, -1)
+
+
+def ref_velocity_command(
+    env: ManagerBasedAnimationEnv, 
+    animation: str, 
+) -> torch.Tensor:
+    """Get the linear velocity (xy) and angular velocity (z) from the dataset's motion."""
+    animation_term: AnimationTerm = env.animation_manager.get_term(animation)
+    
+    ref_root_lin_vel_w = animation_term.get_root_vel_w()
+    ref_root_ang_vel_w = animation_term.get_root_ang_vel_w()
+    ref_root_quat = animation_term.get_root_quat()
+    
+    ref_root_lin_vel_b = math_utils.quat_apply_inverse(ref_root_quat, ref_root_lin_vel_w)
+    ref_root_ang_vel_b = math_utils.quat_apply_inverse(ref_root_quat, ref_root_ang_vel_w)
+    
+    # lin_vel_xy (2) + ang_vel_z (1) = 3
+    command = torch.cat([ref_root_lin_vel_b[..., :2], ref_root_ang_vel_b[..., 2:3]], dim=-1)
+    
+    return command.reshape(env.num_envs, -1)
+
 
 
 

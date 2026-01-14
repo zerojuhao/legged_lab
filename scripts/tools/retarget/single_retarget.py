@@ -68,6 +68,7 @@ GMR Format:
 
 
 import argparse
+from calendar import c
 
 from isaaclab.app import AppLauncher
 
@@ -76,26 +77,27 @@ parser = argparse.ArgumentParser(description="Visulization of retargeted data.")
 parser.add_argument(
     "--robot", 
     type=str,
-    default="g1",
+    default="atom01",
+    choices=["g1", "atom01"],
     help="The robot name to be used.",
 )
 parser.add_argument(
     "--input_file",
     type=str,
-    required=True,
+    default="source/legged_lab/legged_lab/data/MotionData/ACCAD/mixed_walk_run_lab/xiaobu.pkl",
     help="Path to the input GMR motion file (pickle format).",
 )
 parser.add_argument(
     "--output_file",
     type=str,
-    required=True,
+    default="source/legged_lab/legged_lab/data/MotionData/ACCAD/mixed_walk_run_lab/xiaobu.pkl",
     help="Path to save the converted motion data (pickle format).",
 )
 parser.add_argument(
-    "--config_file", 
+    "--config_file",
     type=str,
-    required=True,
-    help="Path to the configuration file (yaml format).",
+    default="scripts/tools/config/atom01.yaml",
+    help="Path to YAML config containing gmr_dof_names, lab_dof_names",
 )
 parser.add_argument(
     "--loop",
@@ -144,6 +146,8 @@ from isaaclab.scene import InteractiveScene
 ##
 if args_cli.robot == "g1":
     from legged_lab.assets.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
+elif args_cli.robot == "atom01":
+    from legged_lab.assets.roboparty import ATOM01_CFG as ROBOT_CFG
 else:
     raise ValueError(f"Robot {args_cli.robot} not supported.")
 

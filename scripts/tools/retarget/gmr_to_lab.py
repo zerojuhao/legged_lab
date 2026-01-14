@@ -27,6 +27,7 @@ Output Legged Lab Format:
 """
 
 
+import joblib
 import numpy as np
 import pickle
 import enum
@@ -56,7 +57,7 @@ def extract_gmr_data(
     end_frame: int = -1,
 ):
     with open(gmr_file_path, 'rb') as f:
-        gmr_data = pickle.load(f)
+        gmr_data = joblib.load(f)
         
     # Extract data from GMR format
     fps = gmr_data['fps']
@@ -155,6 +156,7 @@ def run_simulator(
     max_num_frames = max(num_frames_list)
     
     lab_body_names = robot.data.body_names
+    # print(f"[INFO]: Legged Lab body names: {lab_body_names}")
     key_body_indices = []
     for name in key_body_names:
         if name in lab_body_names:

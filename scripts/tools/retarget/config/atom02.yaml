@@ -1,0 +1,62 @@
+gmr_dof_names:
+  - left_thigh_pitch_joint
+  - left_thigh_roll_joint
+  - left_thigh_yaw_joint
+  - left_knee_joint
+  - left_ankle_pitch_joint
+  - left_ankle_roll_joint
+  - right_thigh_pitch_joint
+  - right_thigh_roll_joint
+  - right_thigh_yaw_joint
+  - right_knee_joint
+  - right_ankle_pitch_joint
+  - right_ankle_roll_joint
+  - torso_roll_joint
+  - torso_yaw_joint
+  - left_shoulder_pitch_joint
+  - left_shoulder_roll_joint
+  - left_shoulder_yaw_joint
+  - left_elbow_pitch_joint
+  - left_elbow_yaw_joint
+  - right_shoulder_pitch_joint
+  - right_shoulder_roll_joint
+  - right_shoulder_yaw_joint
+  - right_elbow_pitch_joint
+  - right_elbow_yaw_joint
+
+lab_dof_names:
+- left_thigh_pitch_joint
+- right_thigh_pitch_joint
+- torso_roll_joint
+- left_thigh_roll_joint
+- right_thigh_roll_joint
+- torso_yaw_joint
+- left_thigh_yaw_joint
+- right_thigh_yaw_joint
+- left_shoulder_pitch_joint
+- right_shoulder_pitch_joint
+- left_knee_joint
+- right_knee_joint
+- left_shoulder_roll_joint
+- right_shoulder_roll_joint
+- left_ankle_pitch_joint
+- right_ankle_pitch_joint
+- left_shoulder_yaw_joint
+- right_shoulder_yaw_joint
+- left_ankle_roll_joint
+- right_ankle_roll_joint
+- left_elbow_pitch_joint
+- right_elbow_pitch_joint
+- left_elbow_yaw_joint
+- right_elbow_yaw_joint
+
+# Names of the key bodies that will be used in further processing
+# Must match the names in the lab robot model
+# Order matters and should align with that used in observation
+lab_key_body_names:
+  - left_elbow_yaw_link
+  - right_elbow_yaw_link
+  - left_elbow_pitch_link
+  - right_elbow_pitch_link
+  - left_knee_link
+  - right_knee_link
