@@ -11,8 +11,8 @@ from legged_lab.tasks.locomotion.amp.mdp.symmetry import g1
 class G1RslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
     class_name = "AMPRunner"
     num_steps_per_env = 24
-    max_iterations = 50000
-    save_interval = 200
+    max_iterations = 5000
+    save_interval = 100
     experiment_name = "g1_amp"
     obs_groups = {
         "policy": ["policy"], 

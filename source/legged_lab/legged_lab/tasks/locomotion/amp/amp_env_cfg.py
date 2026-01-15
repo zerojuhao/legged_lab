@@ -165,7 +165,7 @@ class ObservationsCfg():
     
     @configclass
     class DiscriminatorCfg(ObsGroup):
-        root_local_rot_tan_norm = ObsTerm(func=mdp.root_local_rot_tan_norm)
+        # root_local_rot_tan_norm = ObsTerm(func=mdp.root_local_rot_tan_norm)
         # base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
         # velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
@@ -187,13 +187,13 @@ class ObservationsCfg():
             
     @configclass
     class DiscriminatorDemoCfg(ObsGroup):
-        ref_root_local_rot_tan_norm = ObsTerm(
-            func=mdp.ref_root_local_rot_tan_norm,
-            params={
-                "animation": MISSING,
-                "flatten_steps_dim": False,
-            }
-        )
+        # ref_root_local_rot_tan_norm = ObsTerm(
+        #     func=mdp.ref_root_local_rot_tan_norm,
+        #     params={
+        #         "animation": MISSING,
+        #         "flatten_steps_dim": False,
+        #     }
+        # )
         # ref_root_lin_vel_b = ObsTerm(
         #     func=mdp.ref_root_lin_vel_b,
         #     params={

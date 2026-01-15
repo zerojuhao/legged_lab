@@ -225,7 +225,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Scene
         # ------------------------------------------------------
-        self.scene.robot = ATOM01_LONG_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.robot = ATOM01_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         
         # plane terrain
         self.scene.terrain.terrain_type = "plane"
@@ -305,7 +305,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         
         # discriminator demostration observations
         
-        self.observations.disc_demo.ref_root_local_rot_tan_norm.params["animation"] = ANIMATION_TERM_NAME
+        # self.observations.disc_demo.ref_root_local_rot_tan_norm.params["animation"] = ANIMATION_TERM_NAME
         # self.observations.disc_demo.ref_root_lin_vel_b.params["animation"] = ANIMATION_TERM_NAME
         self.observations.disc_demo.ref_root_ang_vel_b.params["animation"] = ANIMATION_TERM_NAME
         self.observations.disc_demo.ref_joint_pos.params["animation"] = ANIMATION_TERM_NAME
@@ -357,9 +357,9 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # Commands
         # ------------------------------------------------------
         
-        # self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 2.5)
-        # self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        # self.commands.base_velocity.ranges.ang_vel_z = (-0.6, 0.6)
+        # self.commands.base_velocity.ranges.lin_vel_x = (1.0, 1.0)
+        # self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
+        # self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
         # self.commands.base_velocity.ranges.zero_prob = (0.05, 0.05, 0.05)  # 采样零速度
 
         # self.commands.base_velocity.ranges.lin_vel_x = (-0.4, 2.5)
@@ -371,6 +371,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
         self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
         self.commands.base_velocity.ranges.zero_prob = (0.1, 0.1, 0.1)  # 采样零速度
+        
                 
         # ------------------------------------------------------
         # Curriculum
@@ -394,9 +395,12 @@ class Atom01AmpFlatEnvCfg_PLAY(Atom01AmpFlatEnvCfg):
         self.scene.env_spacing = 2.5
         self.episode_length_s = 40.0
 
-        self.commands.base_velocity.ranges.lin_vel_x = (2.5, 2.5)
+        self.commands.base_velocity.ranges.lin_vel_x = (0, 0)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
         self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
+
+        self.events.reset_robot_joints.params["position_range"] = (1,1)
+        self.events.reset_robot_joints.params["velocity_range"] = (0,0)
 
         # disable randomization for play
         self.observations.policy.enable_corruption = False

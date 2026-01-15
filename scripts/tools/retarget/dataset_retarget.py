@@ -34,22 +34,23 @@ parser.add_argument(
     default="atom01", 
     help="Robot name to use (default: atom01)",
 )
+args_cli = parser.parse_args()
 parser.add_argument(
     "--input_dir",
     type=str,
-    default="source/legged_lab/legged_lab/data/MotionData/atom01_long_gmr",
+    default=f"source/legged_lab/legged_lab/data/MotionData/{args_cli.robot}_gmr",
     help="Directory containing input GMR .pkl files",
 )
 parser.add_argument(
     "--output_dir",
     type=str,
-    default="source/legged_lab/legged_lab/data/MotionData/atom01_long_lab",
+    default=f"source/legged_lab/legged_lab/data/MotionData/{args_cli.robot}_lab",
     help="Directory to write converted .pkl files",
 )
 parser.add_argument(
     "--config_file",
     type=str,
-    default="scripts/tools/retarget/config/atom01.yaml",
+    default=f"scripts/tools/retarget/config/{args_cli.robot}.yaml",
     help="Path to YAML config containing gmr_dof_names, lab_dof_names, lab_key_body_names",
 )
 parser.add_argument(
@@ -79,7 +80,7 @@ from isaaclab.scene import InteractiveScene
 if args_cli.robot == "g1":
     from legged_lab.assets.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
 elif args_cli.robot == "atom01":
-    from legged_lab.assets.roboparty import ATOM01_LONG_CFG as ROBOT_CFG
+    from legged_lab.assets.roboparty import ATOM01_CFG as ROBOT_CFG
 else:
     raise ValueError(f"Robot {args_cli.robot} not supported.")
 

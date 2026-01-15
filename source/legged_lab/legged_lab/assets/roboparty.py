@@ -84,8 +84,8 @@ ATOM01_LONG_CFG = ArticulationCfg(
                 ".*torso.*": 5.0,
             },
             armature=0.01,
-            min_delay=3,
-            max_delay=5,
+            min_delay=0,
+            max_delay=3,
         ),
         "feet": DelayedPDActuatorCfg(
             joint_names_expr=[".*_ankle_pitch_joint", ".*_ankle_roll_joint"],
@@ -94,8 +94,8 @@ ATOM01_LONG_CFG = ArticulationCfg(
             stiffness=40.0,
             damping=2.0,
             armature=0.01,
-            min_delay=3,
-            max_delay=5,
+            min_delay=0,
+            max_delay=3,
         ),
         "shoulders": DelayedPDActuatorCfg(
             joint_names_expr=[
@@ -108,8 +108,8 @@ ATOM01_LONG_CFG = ArticulationCfg(
             stiffness=40.0,
             damping=2.0,
             armature=0.01,
-            min_delay=3,
-            max_delay=5,
+            min_delay=0,
+            max_delay=3,
         ),
         "arms": DelayedPDActuatorCfg(
             joint_names_expr=[
@@ -127,8 +127,8 @@ ATOM01_LONG_CFG = ArticulationCfg(
             effort_limit_sim=27.0,
             velocity_limit_sim=8.0,
             armature=0.01,
-            min_delay=3,
-            max_delay=5,
+            min_delay=0,
+            max_delay=3,
         ),
     },
 )

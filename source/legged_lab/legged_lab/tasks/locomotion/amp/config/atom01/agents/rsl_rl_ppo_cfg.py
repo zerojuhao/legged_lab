@@ -58,7 +58,7 @@ class Atom01FlatRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
         symmetry_cfg=RslRlSymmetryCfg(
             use_data_augmentation=True,
             use_mirror_loss=True,
-            mirror_loss_coeff=0.2, # 0.1
+            mirror_loss_coeff=0.1, # 0.1
             data_augmentation_func=atom01.compute_symmetric_states
         ),
         amp_cfg=RslRlAmpCfg(

@@ -84,13 +84,13 @@ parser.add_argument(
 parser.add_argument(
     "--input_file",
     type=str,
-    default="source/legged_lab/legged_lab/data/MotionData/ACCAD/mixed_walk_run_lab/xiaobu.pkl",
+    default="source/legged_lab/legged_lab/data/MotionData/atom01_gmr/127_04.pkl",
     help="Path to the input GMR motion file (pickle format).",
 )
 parser.add_argument(
     "--output_file",
     type=str,
-    default="source/legged_lab/legged_lab/data/MotionData/ACCAD/mixed_walk_run_lab/xiaobu.pkl",
+    default="source/legged_lab/legged_lab/data/MotionData/atom01_lab/127_04.pkl",
     help="Path to save the converted motion data (pickle format).",
 )
 parser.add_argument(
