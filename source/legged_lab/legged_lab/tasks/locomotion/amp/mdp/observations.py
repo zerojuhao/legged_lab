@@ -60,3 +60,17 @@ def ref_root_local_rot_tan_norm(
     else:
         return obs
 
+def ref_projected_gravity(
+    env: ManagerBasedAnimationEnv, 
+    animation: str, 
+) -> torch.Tensor:
+    
+    animation_term: AnimationTerm = env.animation_manager.get_term(animation)
+    num_envs = env.num_envs
+        
+    ref_root_quat = animation_term.get_root_quat() # shape: (num_envs, num_steps, 4)
+    
+    gravity_vec_w = torch.tensor([0.0, 0.0, -1.0], device=ref_root_quat.device)
+    gravity_vec_w = gravity_vec_w.view(1, 1, 3).expand(ref_root_quat.shape[0], ref_root_quat.shape[1], 3)
+    projected_gravity = math_utils.quat_apply_inverse(ref_root_quat, gravity_vec_w)
+    return projected_gravity        

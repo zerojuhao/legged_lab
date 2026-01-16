@@ -307,9 +307,9 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         
         # self.observations.disc_demo.ref_root_local_rot_tan_norm.params["animation"] = ANIMATION_TERM_NAME
         # self.observations.disc_demo.ref_root_lin_vel_b.params["animation"] = ANIMATION_TERM_NAME
-        self.observations.disc_demo.ref_root_ang_vel_b.params["animation"] = ANIMATION_TERM_NAME
-        self.observations.disc_demo.ref_joint_pos.params["animation"] = ANIMATION_TERM_NAME
-        self.observations.disc_demo.ref_joint_vel.params["animation"] = ANIMATION_TERM_NAME
+        # self.observations.disc_demo.ref_root_ang_vel_b.params["animation"] = ANIMATION_TERM_NAME
+        # self.observations.disc_demo.ref_joint_pos.params["animation"] = ANIMATION_TERM_NAME
+        # self.observations.disc_demo.ref_joint_vel.params["animation"] = ANIMATION_TERM_NAME
         # self.observations.disc_demo.ref_key_body_pos_b.params["animation"] = ANIMATION_TERM_NAME
      
         # ------------------------------------------------------

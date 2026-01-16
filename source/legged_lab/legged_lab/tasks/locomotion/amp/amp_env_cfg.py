@@ -28,6 +28,8 @@ import legged_lab.tasks.locomotion.amp.mdp as mdp
 from legged_lab.envs import ManagerBasedAmpEnvCfg
 from legged_lab.managers import AnimationTermCfg as AnimTerm
 from legged_lab.managers import MotionDataTermCfg as MotionDataTerm
+ANIMATION_TERM_NAME = "animation"
+
 
 @configclass
 class AmpSceneCfg(InteractiveSceneCfg):
@@ -165,6 +167,7 @@ class ObservationsCfg():
     
     @configclass
     class DiscriminatorCfg(ObsGroup):
+        projected_gravity = ObsTerm(func=mdp.projected_gravity)
         # root_local_rot_tan_norm = ObsTerm(func=mdp.root_local_rot_tan_norm)
         # base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
@@ -187,51 +190,57 @@ class ObservationsCfg():
             
     @configclass
     class DiscriminatorDemoCfg(ObsGroup):
+        ref_projected_gravity = ObsTerm(
+            func=mdp.ref_projected_gravity,
+            params={
+                "animation": ANIMATION_TERM_NAME,
+            }
+        )
         # ref_root_local_rot_tan_norm = ObsTerm(
         #     func=mdp.ref_root_local_rot_tan_norm,
         #     params={
-        #         "animation": MISSING,
+        #         "animation": ANIMATION_TERM_NAME,
         #         "flatten_steps_dim": False,
         #     }
         # )
         # ref_root_lin_vel_b = ObsTerm(
         #     func=mdp.ref_root_lin_vel_b,
         #     params={
-        #         "animation": MISSING,
+        #         "animation": ANIMATION_TERM_NAME,
         #         "flatten_steps_dim": False,
         #     }
         # )
         ref_root_ang_vel_b = ObsTerm(
             func=mdp.ref_root_ang_vel_b,
             params={
-                "animation": MISSING,
+                "animation": ANIMATION_TERM_NAME,
                 "flatten_steps_dim": False,
             }
         )
         # ref_root_command = ObsTerm(
         #     func=mdp.ref_velocity_command,
         #     params={
-        #         "animation": MISSING,
+        #         "animation": ANIMATION_TERM_NAME,
         #     }
         # )
         ref_joint_pos = ObsTerm(
             func=mdp.ref_joint_pos,
             params={
-                "animation": MISSING,
+                "animation": ANIMATION_TERM_NAME,
                 "flatten_steps_dim": False,
             }
         )
         ref_joint_vel = ObsTerm(
             func=mdp.ref_joint_vel,
             params={
-                "animation": MISSING,
+                "animation": ANIMATION_TERM_NAME,
                 "flatten_steps_dim": False,
             }
         )
         # ref_key_body_pos_b = ObsTerm(
         #     func=mdp.ref_key_body_pos_b,
         #     params={
-        #         "animation": MISSING,
+        #         "animation": ANIMATION_TERM_NAME,
         #         "flatten_steps_dim": False,
         #     }
         # )
@@ -427,7 +436,7 @@ class CurriculumCfg:
         func=mdp.lin_vel_cmd_levels,
         params={
             "reward_term_name": "track_lin_vel_xy_exp",
-            "lin_vel_x_limit": [-0.4, 2.5],
+            "lin_vel_x_limit": [-0.4, 3.0],
             "lin_vel_y_limit": [-0.5, 0.5],
         }
     )
