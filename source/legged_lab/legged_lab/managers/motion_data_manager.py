@@ -506,6 +506,10 @@ class MotionDataTerm(ManagerTermBase):
 
         motion_vel = torch.stack([motion_vx, motion_vy, motion_ang_z], dim=1)  # (num_motions, 3)
         
+        # Debug: 手动调整某些motion的速度，测试匹配效果
+        motion_vel[1,1] = 0.0
+        motion_vel[10,1] = 0.0 
+        
         # ========== 1. 方向一致性匹配过滤 ========== 
         # 只有与命令速度方向完全一致的数据集视为匹配
         cmd_sign = torch.sign(commands)  # (n, 3)
@@ -517,7 +521,7 @@ class MotionDataTerm(ManagerTermBase):
 
         # ========== 2. 基于速度距离分配概率 ========== 
         vel_dist = self.vel_diff(commands, motion_vel, env_ids, velocity_blend_ratio)  # (n, m)
-        scale = 3.0  # 可调参数
+        scale = 1.0  # 可调参数 3
         similarities = torch.exp(-vel_dist * scale)  # 距离越小，相似度越高
         # print("similarities before mask:", similarities)
         # 概率分配：

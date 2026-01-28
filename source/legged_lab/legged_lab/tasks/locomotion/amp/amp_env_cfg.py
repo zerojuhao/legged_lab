@@ -167,7 +167,7 @@ class ObservationsCfg():
     
     @configclass
     class DiscriminatorCfg(ObsGroup):
-        projected_gravity = ObsTerm(func=mdp.projected_gravity)
+        # projected_gravity = ObsTerm(func=mdp.projected_gravity)
         # root_local_rot_tan_norm = ObsTerm(func=mdp.root_local_rot_tan_norm)
         # base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
@@ -190,12 +190,12 @@ class ObservationsCfg():
             
     @configclass
     class DiscriminatorDemoCfg(ObsGroup):
-        ref_projected_gravity = ObsTerm(
-            func=mdp.ref_projected_gravity,
-            params={
-                "animation": ANIMATION_TERM_NAME,
-            }
-        )
+        # ref_projected_gravity = ObsTerm(
+        #     func=mdp.ref_projected_gravity,
+        #     params={
+        #         "animation": ANIMATION_TERM_NAME,
+        #     }
+        # )
         # ref_root_local_rot_tan_norm = ObsTerm(
         #     func=mdp.ref_root_local_rot_tan_norm,
         #     params={
@@ -436,10 +436,11 @@ class CurriculumCfg:
         func=mdp.lin_vel_cmd_levels,
         params={
             "reward_term_name": "track_lin_vel_xy_exp",
-            "lin_vel_x_limit": [-0.4, 3.0],
+            "lin_vel_x_limit": [-0.5, 2.5],
             "lin_vel_y_limit": [-0.5, 0.5],
         }
     )
+    
     # pass
 @configclass
 class MotionDataCfg:

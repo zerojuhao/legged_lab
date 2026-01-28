@@ -190,37 +190,32 @@ Helper functions for symmetry.
 
 In Isaac Sim, the joint ordering is as follows:
 [           
-'left_thigh_yaw_joint',   #0
-'right_thigh_yaw_joint',  #1
-'torso_joint',            #2
-'left_thigh_roll_joint',  #3
-'right_thigh_roll_joint', #4
-'left_arm_pitch_joint',   #5
-'right_arm_pitch_joint',  #6
-'left_thigh_pitch_joint', #7
-'right_thigh_pitch_joint',#8
-'left_arm_roll_joint',    #9
-'right_arm_roll_joint',   #10
-'left_knee_joint',        #11
-'right_knee_joint',       #12
-'left_arm_yaw_joint',     #13
-'right_arm_yaw_joint',    #14
-'left_ankle_pitch_joint', #15
-'right_ankle_pitch_joint',#16
-'left_elbow_pitch_joint', #17
-'right_elbow_pitch_joint',#18
-'left_ankle_roll_joint',  #19
-'right_ankle_roll_joint', #20
-'left_elbow_yaw_joint',   #21
-'right_elbow_yaw_joint'   #22
+- left_thigh_pitch_joint    0
+- right_thigh_pitch_joint   1 
+- torso_roll_joint          2
+- left_thigh_roll_joint     3
+- right_thigh_roll_joint    4
+- torso_yaw_joint           5
+- left_thigh_yaw_joint      6
+- right_thigh_yaw_joint     7
+- left_shoulder_pitch_joint 8
+- right_shoulder_pitch_joint9
+- left_knee_joint           10
+- right_knee_joint          11
+- left_shoulder_roll_joint  12
+- right_shoulder_roll_joint 13
+- left_ankle_pitch_joint    14
+- right_ankle_pitch_joint   15
+- left_shoulder_yaw_joint   16
+- right_shoulder_yaw_joint  17
+- left_ankle_roll_joint     18
+- right_ankle_roll_joint    19
+- left_elbow_pitch_joint    20
+- right_elbow_pitch_joint   21
+- left_elbow_yaw_joint      22
+- right_elbow_yaw_joint     23
 ]
 
-Correspondingly, the joint ordering for the ANYmal robot is:
-
-* LF = left front --> [0, 4, 8]
-* LH = left hind --> [1, 5, 9]
-* RF = right front --> [2, 6, 10]
-* RH = right hind --> [3, 7, 11]
 """
 
 
@@ -228,13 +223,10 @@ def _switch_joints_left_right(joint_data: torch.Tensor) -> torch.Tensor:
     """Applies a left-right symmetry transformation to the joint data tensor."""
     joint_data_switched = joint_data.clone()
     # left <-- right
-    joint_data_switched[..., [0, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21]] = joint_data[..., [1, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]]
+    joint_data_switched[..., [0, 3, 6, 8, 10, 12, 14, 16, 18, 20, 22]] = joint_data[..., [1, 4, 7, 9, 11, 13, 15, 17, 19, 21, 23]]
     # right <-- left
-    joint_data_switched[..., [1, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]] = joint_data[..., [0, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21]]
-    
-    joint_data_switched[..., [0,1,2,3,4,9,10,13,14,19,20,21,22]] = -1 * joint_data_switched[..., [0,1,2,3,4,9,10,13,14,19,20,21,22]]
-    # joint_data_switched[..., [5,6,7,8,11,12,15,16,17,18]] = joint_data[..., [5,6,7,8,11,12,15,16,17,18]]
-
-    # joint_data_switched[..., [0,1,2,3,4,9,10,13,14,19,20,21,22]] *= -1
+    joint_data_switched[..., [1, 4, 7, 9, 11, 13, 15, 17, 19, 21, 23]] = joint_data[..., [0, 3, 6, 8, 10, 12, 14, 16, 18, 20, 22]]
+    # flip signs for asymmetric joints
+    joint_data_switched[..., [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]] = -1 * joint_data_switched[..., [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]]
 
     return joint_data_switched

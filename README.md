@@ -24,7 +24,7 @@ This repository is an extension for legged robot reinforcement learning based on
 https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
 
 ## 🔥 News & Updates
-
+- 2026/01/01: Support Roboparty Atom01, Unitree A1 for AMP
 - 2025/12/16: Test in Isaac Lab 2.3.1 and RSL-RL 3.2.0. 
 - 2025/12/05: Use git lfs to store large files, including motion data and robot models.
 - 2025/11/23: Add Symmetry data augmentation in AMP training.
@@ -49,10 +49,10 @@ https://github.com/user-attachments/assets/ed84a8a3-f349-44ac-9cfd-2baab2265a25
 
     ```bash
     # Option 1: HTTPS
-    git clone https://github.com/zitongbai/legged_lab
+    git clone https://github.com/zerojuhao/legged_lab
     
     # Option 2: SSH
-    git clone git@github.com:zitongbai/legged_lab.git
+    git clone git@github.com:zerojuhao/legged_lab.git
     
     cd legged_lab
     ```
@@ -84,18 +84,8 @@ We have already provided some off-the-shelf motion data in the `source/legged_la
 If you want to add more motion data, you can do so by following the steps below.
 
 1. Retarget human motion data to the robot model. We recommend using [GMR](https://github.com/YanjieZe/GMR) for retargeting human motion data. 
-2. Put the retargeted motion data in the `temp/gmr_data` folder. 
-3. Use a helper script to convert the motion data to the required format:
-
-    ```bash
-    python scripts/tools/retarget/dataset_retarget.py \
-        --robot g1 \
-        --input_dir temp/gmr_data/ \
-        --output_dir temp/lab_data/ \
-        --config_file scripts/tools/retarget/config/g1_29dof.yaml \
-        --loop clamp
-    ```
-4. Move the converted data from `temp/lab_data` to `source/legged_lab/legged_lab/data/MotionData`, and set the `MotionDataCfg` in the config file, e.g., `source/legged_lab/legged_lab/tasks/locomotion/amp/config/g1/g1_amp_env_cfg.py`. 
+2. Move the converted data to `source/legged_lab/legged_lab/data/MotionData`, then use the tool `scripts/tools/retarget/dataset_retarget.py` to reorder the joint sequence from GMR(URDF) to Isaac Lab.
+3. Set the `MotionDataCfg` in the config file, e.g., `source/legged_lab/legged_lab/tasks/locomotion/amp/config/g1/g1_amp_env_cfg.py`. 
 
 Please refer to the comments in the script for more details about the arguments, and refer to `scripts/tools/retarget/gmr_to_lab.py` for the data format used in this repository.
 
@@ -137,10 +127,19 @@ python scripts/rsl_rl/play.py --task LeggedLab-Isaac-Deepmimic-G1-v0 --headless 
 To train the AMP algorithm, you can run the following command:
 
 ```bash
+python scripts/rsl_rl/train.py --task LeggedLab-Isaac-AMP-Flat-Atom01-v0 --headless --num_envs 8192
+```
+
+```bash
+python scripts/rsl_rl/train.py --task LeggedLab-Isaac-AMP-Flat-Atom02-v0 --headless --num_envs 8192
+```
+
+```bash
 python scripts/rsl_rl/train.py --task LeggedLab-Isaac-AMP-G1-v0 --headless --max_iterations 50000
 ```
 
 If you want to train it in a non-default gpu, you can pass more arguments to the command:
+
 
 ```bash
 # replace `x` with the gpu id you want to use
@@ -155,6 +154,15 @@ For more details about the arguments, run `python scripts/rsl_rl/train.py -h`.
 <summary>Play</summary>
 
 You can play the trained model in a headless mode and record the video: 
+
+
+```bash
+python scripts/rsl_rl/play.py --task LeggedLab-Isaac-AMP-Flat-Atom01-Play-v0 --num_envs 3 --headless
+```
+
+```bash
+python scripts/rsl_rl/play.py --task LeggedLab-Isaac-AMP-Flat-Atom02-Play-v0 --num_envs 3 --headless
+```
 
 ```bash
 # replace the checkpoint path with the path to your trained model
@@ -171,7 +179,7 @@ The video will be saved in the `logs/rsl_rl/experiment_name/run_name/videos/play
 - [x] Self-contact penalty in AMP
 - [x] Asymmetric Actor-Critic in AMP
 - [x] Symmetric Reward
-- [ ] Sim2sim in mujoco
+- [x] Sim2sim in mujoco
 - [ ] Add support for image observations
 - [ ] Walk in rough terrain with AMP
 

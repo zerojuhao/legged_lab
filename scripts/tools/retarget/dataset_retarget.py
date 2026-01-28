@@ -19,6 +19,7 @@ This script intentionally does NOT support start/end frame clipping; it converts
 """
 
 import argparse
+from calendar import c
 import os
 from pathlib import Path
 import yaml
@@ -31,10 +32,12 @@ parser = argparse.ArgumentParser(description="Batch retarget GMR -> Legged Lab (
 parser.add_argument(
     "--robot",
     type=str,
-    default="atom01", 
-    help="Robot name to use (default: atom01)",
+    default="atom01_long_base_link", 
+    choices=["g1", "atom01", "atom01_long_base_link", "atom02"],
+    help="Robot name to use (default: atom01_long_base_link)",
 )
 args_cli = parser.parse_args()
+
 parser.add_argument(
     "--input_dir",
     type=str,
@@ -81,6 +84,10 @@ if args_cli.robot == "g1":
     from legged_lab.assets.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
 elif args_cli.robot == "atom01":
     from legged_lab.assets.roboparty import ATOM01_CFG as ROBOT_CFG
+elif args_cli.robot == "atom01_long_base_link":
+    from legged_lab.assets.roboparty import ATOM01_LONG_BASE_LINK_CFG as ROBOT_CFG
+elif args_cli.robot == "atom02":
+    from legged_lab.assets.roboparty import ATOM02_CFG as ROBOT_CFG
 else:
     raise ValueError(f"Robot {args_cli.robot} not supported.")
 
@@ -146,7 +153,7 @@ def main():
         warnings.warn("Motions have different fps. Using fps from first motion.")
 
     fps = fps_values[0]
-    dt = 1.0 / fps
+    dt = 1.0 / 10
 
     # start simulation context
     sim = sim_utils.SimulationContext(sim_utils.SimulationCfg(dt=dt, device=args_cli.device))

@@ -9,29 +9,19 @@ from legged_lab.tasks.locomotion.amp.amp_env_cfg import LocomotionAmpEnvCfg, Mot
 
 import isaaclab.terrains as terrain_gen
 
-##
-# Pre-defined configs
-##
-
-from legged_lab.assets.roboparty import ATOM01_CFG, ATOM01_LONG_BASE_LINK_CFG
+from legged_lab.assets.roboparty import ATOM02_CFG
 from legged_lab import LEGGED_LAB_ROOT_DIR
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 
 
 # The order must align with the retarget config file scripts/tools/retarget/config/g1_29dof.yaml
 KEY_BODY_NAMES = [
-    # "left_ankle_roll_link", 
-    # "right_ankle_roll_link",
-    "left_elbow_yaw_link",
+    "left_elbow_yaw_link", 
     "right_elbow_yaw_link",
-    # "left_arm_roll_link",
-    # "right_arm_roll_link",
+    "left_shoulder_roll_link",
+    "right_shoulder_roll_link",
     # "left_knee_link",
     # "right_knee_link",
-    # "left_elbow_pitch_link",
-    # "right_elbow_pitch_link",
-    "left_arm_yaw_link",
-    "right_arm_yaw_link"
 ] # if changed here and symmetry is enabled, remember to update amp.mdp.symmetry.g1 as well!
 ANIMATION_TERM_NAME = "animation"
 AMP_NUM_STEPS = 3
@@ -59,6 +49,24 @@ class Rewards():
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=0)
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=0)
     base_height = RewTerm(func=mdp.base_height, weight=0, params={"target_height": 0.5})
+
+
+    body_ang_vel_xy_l2 = RewTerm(
+        func=mdp.body_ang_vel_xy_l2,
+        weight=0.0,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=["torso_yaw_link"]),
+        },
+    )
+    
+    body_flat_orientation_l2 = RewTerm(
+        func=mdp.body_flat_orientation_l2,
+        weight=0.0,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=["torso_yaw_link"]),
+        },
+    )
+
 
     # -- Joint
     joint_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=0)
@@ -121,9 +129,8 @@ class Rewards():
         },
     )
 
-
 @configclass
-class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
+class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
     rewards: Rewards = Rewards()
 
     def __post_init__(self):
@@ -133,9 +140,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Scene
         # ------------------------------------------------------
-        # self.scene.robot = ATOM01_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        self.scene.robot = ATOM01_LONG_BASE_LINK_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-
+        self.scene.robot = ATOM02_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         
         # plane terrain
         self.scene.terrain.terrain_type = "plane"
@@ -145,7 +150,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # motion data
         # ------------------------------------------------------
         self.motion_data.motion_dataset.motion_data_dir = os.path.join(
-            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "atom01_long_lab"
+            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "atom02_lab"
         )
         self.motion_data.motion_dataset.motion_data_weights={
             
@@ -211,13 +216,13 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         #         preserve_order=True
         #     )
         # }
-        
         self.observations.disc.history_length = AMP_NUM_STEPS
-        
+                 
         # ------------------------------------------------------
         # Events
         # ------------------------------------------------------
-
+        self.events.randomize_rigid_body_com.params["asset_cfg"].body_names = ["torso_roll_link", "torso_yaw_link", "base_link"]
+        self.events.base_external_force_torque.params["asset_cfg"].body_names = ["torso_roll_link", "torso_yaw_link"]
         # ------------------------------------------------------
         # Rewards
         # ------------------------------------------------------
@@ -228,9 +233,12 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         
         # base
         # self.rewards.lin_vel_z_l2.weight = -0.1
-        self.rewards.ang_vel_xy_l2.weight = -0.1
-        self.rewards.flat_orientation_l2.weight = -1.0
+        # self.rewards.ang_vel_xy_l2.weight = -0.1 # 0.1
+        # self.rewards.flat_orientation_l2.weight = -1.0
         self.rewards.base_height.weight = -10.0
+        
+        self.rewards.body_ang_vel_xy_l2.weight = -0.1
+        self.rewards.body_flat_orientation_l2.weight = -1.0
         
         # joint
         self.rewards.joint_vel_l2.weight = -2e-4
@@ -245,7 +253,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # feet
         self.rewards.feet_slide.weight = -0.2
         self.rewards.feet_stumble.weight = -0.1
-        # self.rewards.sound_suppression.weight = -5e-4
+        # self.rewards.sound_suppression.weight = -5e-3
         # self.rewards.feet_air_time_positive_biped.weight = 1.0
 
 
@@ -259,40 +267,30 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # Commands
         # ------------------------------------------------------
         
-        # self.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.0)
-        # self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
-        # self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
-        # self.commands.base_velocity.ranges.zero_prob = (0.05, 0.05, 0.05)  # 采样零速度
-
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.4, 0.9)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
+        self.commands.base_velocity.ranges.zero_prob = (0.1, 0.1, 0.1)  # 采样零速度
+                
+                
         # self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 2.5)
         # self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
         # self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
         # self.commands.base_velocity.ranges.zero_prob = (0.5, 0.5, 0.5)  # 采样零速度
-                
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 0.9)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
         
-        # self.commands.base_velocity.ranges.lin_vel_x = (-0.0, 0.0)
-        # self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
-        # self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
-        
-        self.commands.base_velocity.ranges.zero_prob = (0.5, 0.5, 0.5)  # 采样零速度
-        
-                
         # ------------------------------------------------------
         # Curriculum
         # ------------------------------------------------------
         
         # self.terminations.base_contact.params["sensor_cfg"].body_names = [
-        #     ".*_thigh_.*_link", "base_link", ".*_arm_.*_link", ".*_elbow_.*_link",
+        #     ".*_thigh_.*_link", "base_link", ".*_shoulder_.*_link", ".*_elbow_.*_link",
         # ]
-        if self.__class__.__name__ == "Atom01AmpFlatEnvCfg":
+        if self.__class__.__name__ == "Atom02AmpFlatEnvCfg":
             self.disable_zero_weight_rewards()
             
             
 @configclass
-class Atom01AmpFlatEnvCfg_PLAY(Atom01AmpFlatEnvCfg):
+class Atom02AmpFlatEnvCfg_PLAY(Atom02AmpFlatEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
@@ -302,9 +300,9 @@ class Atom01AmpFlatEnvCfg_PLAY(Atom01AmpFlatEnvCfg):
         self.scene.env_spacing = 2.5
         self.episode_length_s = 40.0
 
-        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.0)
+        self.commands.base_velocity.ranges.lin_vel_x = (0, 0)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-        self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
 
         self.events.reset_robot_joints.params["position_range"] = (1,1)
         self.events.reset_robot_joints.params["velocity_range"] = (0,0)

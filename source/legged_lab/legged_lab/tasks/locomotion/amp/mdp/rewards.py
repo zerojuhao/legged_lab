@@ -476,3 +476,36 @@ def base_height(
     height_diff = adjusted_target_height - asset.data.root_pos_w[:, 2]
     penalty = torch.square(torch.clamp(height_diff, min=0.0))
     return penalty
+
+
+def body_ang_vel_xy_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Penalize xy-axis angular velocities of specified bodies using L2 squared kernel.
+
+    NOTE: Only the bodies configured in :attr:`asset_cfg.body_ids` will have their angular velocities contribute to the penalty.
+    """
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene[asset_cfg.name]
+    # compute the penalty for xy angular velocities
+    ang_vel_xy = asset.data.body_ang_vel_w[:, asset_cfg.body_ids, :2]
+    return torch.sum(torch.square(ang_vel_xy), dim=[1, 2])
+
+
+def body_flat_orientation_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Penalize deviation of x-axis of specified bodies from horizontal using L2 squared kernel.
+
+    This penalizes the z-component of the body's x-axis in world coordinates, encouraging the x-axis to remain level.
+
+    NOTE: Only the bodies configured in :attr:`asset_cfg.body_ids` will contribute to the penalty.
+    """
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene[asset_cfg.name]
+    # get body quaternions
+    body_quat = asset.data.body_quat_w[:, asset_cfg.body_ids]  # shape: (num_envs, num_bodies, 4)
+    # local x-axis vector
+    x_axis_local = torch.tensor([1.0, 0.0, 0.0], device=env.device).unsqueeze(0).unsqueeze(0).expand(body_quat.shape[0], body_quat.shape[1], -1)
+    # transform to world coordinates
+    x_axis_world = math_utils.quat_apply(body_quat, x_axis_local)  # shape: (num_envs, num_bodies, 3)
+    # penalize the z-component (deviation from horizontal)
+    return torch.sum(torch.square(x_axis_world[:, :, 2]), dim=1)
+
+
