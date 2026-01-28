@@ -32,8 +32,8 @@ parser = argparse.ArgumentParser(description="Batch retarget GMR -> Legged Lab (
 parser.add_argument(
     "--robot",
     type=str,
-    default="atom01_long_base_link", 
-    choices=["g1", "atom01", "atom01_long_base_link", "atom02"],
+    default="a1", 
+    choices=["g1", "atom01", "atom01_long_base_link", "atom02", "a1"],
     help="Robot name to use (default: atom01_long_base_link)",
 )
 args_cli = parser.parse_args()
@@ -88,6 +88,8 @@ elif args_cli.robot == "atom01_long_base_link":
     from legged_lab.assets.roboparty import ATOM01_LONG_BASE_LINK_CFG as ROBOT_CFG
 elif args_cli.robot == "atom02":
     from legged_lab.assets.roboparty import ATOM02_CFG as ROBOT_CFG
+elif args_cli.robot == "a1":
+    from legged_lab.assets.unitree import UNITREE_A1_CFG as ROBOT_CFG
 else:
     raise ValueError(f"Robot {args_cli.robot} not supported.")
 
@@ -153,7 +155,7 @@ def main():
         warnings.warn("Motions have different fps. Using fps from first motion.")
 
     fps = fps_values[0]
-    dt = 1.0 / 10
+    dt = 1.0 / fps
 
     # start simulation context
     sim = sim_utils.SimulationContext(sim_utils.SimulationCfg(dt=dt, device=args_cli.device))

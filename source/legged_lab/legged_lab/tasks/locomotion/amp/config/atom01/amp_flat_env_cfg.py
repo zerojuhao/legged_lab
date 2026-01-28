@@ -18,7 +18,6 @@ from legged_lab import LEGGED_LAB_ROOT_DIR
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 
 
-# The order must align with the retarget config file scripts/tools/retarget/config/g1_29dof.yaml
 KEY_BODY_NAMES = [
     # "left_ankle_roll_link", 
     # "right_ankle_roll_link",
@@ -32,7 +31,7 @@ KEY_BODY_NAMES = [
     # "right_elbow_pitch_link",
     "left_arm_yaw_link",
     "right_arm_yaw_link"
-] # if changed here and symmetry is enabled, remember to update amp.mdp.symmetry.g1 as well!
+]
 ANIMATION_TERM_NAME = "animation"
 AMP_NUM_STEPS = 3
 
@@ -149,7 +148,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         )
         self.motion_data.motion_dataset.motion_data_weights={
             
-            # # # 4
+            # CMU
             # '02_02': 1, # walk
             # '16_34': 1, # walk to stop
             
@@ -159,11 +158,11 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
             # "143_02": 1, # run to stop
             # "143_03": 1, # stand to run
             
-            # # # standstill 1
+            # standstill 
             "A1-_Stand_stageii": 1,
             
             
-            # # # male2 walk 8
+            # male2 walk
             # "B4_-_Stand_to_Walk_backwards_stageii":1,
             "B9_-__Walk_turn_left_90_stageii":1,
             "B10_-__Walk_turn_left_45_stageii":1,
@@ -174,7 +173,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
             # "B22_-__side_step_left_stageii":1,
             # "B23_-__side_step_right_stageii":1,
             
-            # # male2 run 8
+            # male2 run
             # "C1_-_stand_to_run_stageii": 1,
             # "C3_-_run_stageii": 1,
             "C4_-_run_to_walk_a_stageii": 1, # 2.3204
@@ -184,7 +183,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
             # "C15_-_run_turn_right_45_stageii":1,
             "C17_-_run_change_direction_stageii":1,
             
-            # # 自设动作 1
+            # using GVHMR GMR
             "move_back":1,
             "move_l":1,
             "move_r":1,
@@ -269,15 +268,15 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
         # self.commands.base_velocity.ranges.zero_prob = (0.5, 0.5, 0.5)  # 采样零速度
                 
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 0.9)
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.4, 0.9)
         self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
         self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
+        self.commands.base_velocity.ranges.zero_prob = (0.1, 0.1, 0.1)  # 采样零速度
         
         # self.commands.base_velocity.ranges.lin_vel_x = (-0.0, 0.0)
         # self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
         # self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
-        
-        self.commands.base_velocity.ranges.zero_prob = (0.5, 0.5, 0.5)  # 采样零速度
+        # self.commands.base_velocity.ranges.zero_prob = (0.5, 0.5, 0.5)  # 采样零速度
         
                 
         # ------------------------------------------------------

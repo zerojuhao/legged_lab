@@ -1,11 +1,6 @@
-import os
-
 from isaaclab.utils import configclass
-
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoActorCriticRecurrentCfg, RslRlPpoAlgorithmCfg, RslRlSymmetryCfg
 from legged_lab.rsl_rl import RslRlPpoAmpAlgorithmCfg, RslRlAmpCfg, RslRlPpoActorCriticConv2dCfg
-from legged_lab import LEGGED_LAB_ROOT_DIR
-import torch
 from legged_lab.tasks.locomotion.amp.mdp.symmetry import atom01
 
 

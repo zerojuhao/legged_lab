@@ -1,0 +1,36 @@
+gmr_dof_names:
+ - FL_hip_joint
+ - FL_thigh_joint
+ - FL_calf_joint
+ - FR_hip_joint
+ - FR_thigh_joint
+ - FR_calf_joint
+ - RL_hip_joint
+ - RL_thigh_joint
+ - RL_calf_joint
+ - RR_hip_joint
+ - RR_thigh_joint
+ - RR_calf_joint
+
+lab_dof_names:
+- FL_hip_joint
+- FR_hip_joint
+- RL_hip_joint
+- RR_hip_joint
+- FL_thigh_joint
+- FR_thigh_joint
+- RL_thigh_joint
+- RR_thigh_joint
+- FL_calf_joint
+- FR_calf_joint
+- RL_calf_joint
+- RR_calf_joint
+
+# Names of the key bodies that will be used in further processing
+# Must match the names in the lab robot model
+# Order matters and should align with that used in observation
+lab_key_body_names:
+- FL_calf
+- FR_calf
+- RL_calf
+- RR_calf

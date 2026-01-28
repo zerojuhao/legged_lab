@@ -7,8 +7,9 @@ parser = argparse.ArgumentParser(description="Visulization of retargeted data.")
 parser.add_argument(
     "--robot", 
     type=str,
-    default="g1",
+    default="a1",
     help="The robot name to be used.",
+    choices=["g1", "a1", "atom01", "atom01_long_base_link", "atom02"],
 )
 
 # append AppLauncher cli args
@@ -34,11 +35,19 @@ from isaaclab.assets import Articulation
 ##
 # Pre-defined configs
 ##
+# load robot cfg as single_retarget does
 if args_cli.robot == "g1":
     from legged_lab.assets.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
+elif args_cli.robot == "atom01":
+    from legged_lab.assets.roboparty import ATOM01_CFG as ROBOT_CFG
+elif args_cli.robot == "atom01_long_base_link":
+    from legged_lab.assets.roboparty import ATOM01_LONG_BASE_LINK_CFG as ROBOT_CFG
+elif args_cli.robot == "atom02":
+    from legged_lab.assets.roboparty import ATOM02_CFG as ROBOT_CFG
+elif args_cli.robot == "a1":
+    from legged_lab.assets.unitree import UNITREE_A1_CFG as ROBOT_CFG
 else:
     raise ValueError(f"Robot {args_cli.robot} not supported.")
-
 
 if __name__ == "__main__":
     # # Ground-plane

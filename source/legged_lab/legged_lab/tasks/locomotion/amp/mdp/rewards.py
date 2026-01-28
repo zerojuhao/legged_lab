@@ -7,6 +7,7 @@ from isaaclab.envs import mdp
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor, RayCaster
 from isaaclab.assets import Articulation, RigidObject
+from isaaclab.utils.math import quat_apply_inverse, yaw_quat, quat_conjugate, quat_apply
 import isaaclab.utils.math as math_utils
 
 if TYPE_CHECKING:
@@ -391,66 +392,6 @@ def low_speed_sway_penalty(
     # Apply penalty only when command speed is below threshold
     return vel_penalty * (command_speed < command_threshold).float()
 
-
-def ankle_collision_penalty(
-    env: ManagerBasedRLEnv,
-    sensor_cfg: SceneEntityCfg,
-    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-    threshold: float = 1.0,
-    distance_threshold: float = 0.1,
-) -> torch.Tensor:
-    """Penalize collisions between the two ankle bodies.
-    
-    This function detects potential self-collisions between the left and right ankle bodies
-    by checking if both ankles have contact forces and are close to each other.
-    
-    Args:
-        env: The RL environment.
-        sensor_cfg: The contact sensor configuration. Must have exactly 2 body_ids 
-            corresponding to left and right ankle bodies (e.g., ".*_ankle_roll_link").
-        asset_cfg: The robot asset configuration with the same body_names as sensor_cfg.
-        threshold: The force threshold (in N) above which contact is considered. Defaults to 1.0.
-        distance_threshold: The distance threshold (in m) below which ankles are considered 
-            close enough for potential self-collision. Defaults to 0.1.
-    
-    Returns:
-        A tensor of shape (num_envs,) containing the penalty for ankle collisions.
-        The penalty is the sum of contact forces when both ankles are in contact and close together.
-    """
-    # Extract contact sensor
-    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
-    asset: Articulation = env.scene[asset_cfg.name]
-    
-    # Get contact forces for both ankles
-    # Shape: (num_envs, history_length, num_bodies, 3)
-    contacts = contact_sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :]
-    # Get max force magnitude over history for each ankle
-    # Shape: (num_envs, num_bodies)
-    force_magnitude = torch.max(torch.norm(contacts, dim=-1), dim=1)[0]
-    
-    # Check if each ankle has contact force above threshold
-    left_in_contact = force_magnitude[:, 0] > threshold
-    right_in_contact = force_magnitude[:, 1] > threshold
-    
-    # Both ankles in contact
-    both_in_contact = left_in_contact & right_in_contact
-    
-    # Get ankle positions in world frame
-    # Shape: (num_envs, 2, 3)
-    ankle_pos_w = asset.data.body_pos_w[:, asset_cfg.body_ids, :]
-    
-    # Calculate distance between ankles
-    # Shape: (num_envs,)
-    ankle_distance = torch.norm(ankle_pos_w[:, 0, :] - ankle_pos_w[:, 1, :], dim=-1)
-    
-    # Ankles are close together (potential self-collision)
-    ankles_close = ankle_distance < distance_threshold
-    
-    # Penalty: sum of both ankle forces when both are in contact and close together
-    penalty = (force_magnitude[:, 0] + force_magnitude[:, 1]) * both_in_contact.float() * ankles_close.float()
-    
-    return torch.exp(-penalty)
-
 def base_height(
     env: ManagerBasedRLEnv,
     target_height: float,
@@ -509,3 +450,374 @@ def body_flat_orientation_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg =
     return torch.sum(torch.square(x_axis_world[:, :, 2]), dim=1)
 
 
+
+##########################
+# Agile But Safe Rewards #
+##########################
+
+def reach_pos_target_soft(
+    env: ManagerBasedRLEnv, 
+    position_target_sigma_soft: float = 2.0, 
+    command_name: str = "pose_command"
+    ) -> torch.Tensor:
+    command = env.command_manager.get_command(command_name)
+    position_targets = command[:, :2]
+    distance = torch.norm(position_targets, dim=1)
+    return (1 /(1 + torch.square(distance / position_target_sigma_soft)))
+
+def reach_pos_target_tight(
+    env: ManagerBasedRLEnv, 
+    position_target_sigma_tight: float = 0.5, 
+    command_name: str = "pose_command"
+    ) -> torch.Tensor:
+    
+    command = env.command_manager.get_command(command_name)
+    position_targets = command[:, :2]
+    distance = torch.norm(position_targets, dim=1)    
+    return (1 /(1 + torch.square(distance / position_target_sigma_tight)))
+
+def reach_heading_target(
+    env: ManagerBasedRLEnv, 
+    heading_target_sigma: float = 0.1, 
+    position_target_sigma_soft: float = 2.0, 
+    command_name: str = "pose_command"
+    ) -> torch.Tensor:
+    
+    command = env.command_manager.get_command(command_name)
+    position_targets = command[:, :2]
+    
+    distance = torch.norm(position_targets, dim=1)
+    near_goal = (distance < position_target_sigma_soft)
+    angle_difference = torch.abs(command[:, 2])
+    heading_rew = 1 /(1 + torch.square(angle_difference / heading_target_sigma))
+    return heading_rew * near_goal
+
+
+def reach_pos_target_times_heading(
+    env: ManagerBasedRLEnv,
+    position_target_sigma: float = 0.5,
+    command_name: str = "pose_command"
+    ) -> torch.Tensor:
+    
+    # Compute distance between robot and target positions
+    command = env.command_manager.get_command(command_name)
+    position_targets = command[:, :2]
+    distance = torch.norm(position_targets, dim=1)    
+    # Compute heading angle of the robot
+    angle_difference = torch.abs(command[:, 2])  # 0 radians represents positive x-axis direction
+    
+    # Apply a penalty if the robot deviates from the positive x-axis direction
+    heading_penalty = torch.abs(torch.cos(angle_difference)) # avoid negative rewards
+    
+    # Compute the reward based on distance and heading penalty
+    distance_reward = (1 / (1 + torch.square(distance / position_target_sigma)))
+    
+    # Combine distance reward and heading penalty
+    combined_reward = distance_reward * heading_penalty * torch.exp(- angle_difference.abs())
+
+    return combined_reward
+
+
+def velo_dir(
+    env: ManagerBasedRLEnv,
+    position_target_sigma_tight: float = 0.5,
+    command_name: str = "pose_command",
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Reward forward velocity when moving roughly toward the target.
+
+    - command is expected in base frame: (x, y, heading)
+    - gives small continuous reward proportional to forward speed when moving toward target,
+      plus a fixed bonus when very close to the target.
+    """
+    asset: Articulation = env.scene[asset_cfg.name]
+    # get command (base frame) and robot base velocities
+    command = env.command_manager.get_command(command_name)
+    position_targets = command[:, :2]
+    distance = torch.norm(position_targets, dim=1)
+
+    # in base frame forward is +x axis, so good direction means dir_unit.x not strongly negative
+    good_dir = command[:, 2].abs() < 0.25
+
+    # root forward velocity in base frame
+    forward_vel = asset.data.root_lin_vel_b[:, 0]
+    # forward = forward_vel > 0.0
+    forward_reward = forward_vel.clip(min=0.0) * good_dir * (distance > position_target_sigma_tight) + 1.0 * (distance < position_target_sigma_tight)
+
+
+    return forward_reward 
+
+
+def stand_still_pos(
+    env: ManagerBasedRLEnv,
+    position_target_sigma_tight: float = 0.5,
+    command_name: str = "pose_command",
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Penalize deviation from a nominal standing pose when commanded to stay near the target.
+
+    - builds a small stand_bias (matching original structure: every 3rd joint pattern)
+    - returns the L1 deviation summed over joints, masked by being close to the goal.
+    """
+    # get articulation joint positions and defaults
+    asset: Articulation = env.scene[asset_cfg.name]
+    joint_pos = asset.data.joint_pos
+    default_pos = asset.data.default_joint_pos
+
+    # distance to target (command in base frame)
+    command = env.command_manager.get_command(command_name)
+    position_targets = command[:, :2]
+    distance = torch.norm(position_targets, dim=1)
+
+    # L1 deviation from desired standing pose, applied only when close to target
+    deviation = torch.sum(torch.abs(joint_pos - default_pos), dim=1)
+    
+    return deviation * (distance < position_target_sigma_tight)
+
+
+def nomove(
+    env: ManagerBasedRLEnv,
+    position_target_sigma_soft: float = 2.0,
+    command_name: str = "pose_command",
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Penalize agents that stand still while facing away from the target and far from it."""
+    # robot base velocities and angular velocity
+    asset: Articulation = env.scene[asset_cfg.name]
+    lin_vel_xy = asset.data.root_lin_vel_b[:, :2]
+    ang_vel_z = asset.data.root_ang_vel_b[:, 2]
+
+    # static = low linear and angular velocity
+    static = torch.logical_and(torch.norm(lin_vel_xy, dim=-1) < 0.1, torch.abs(ang_vel_z) < 0.1)
+
+    # direction to target (base frame) and bad_dir test
+    command = env.command_manager.get_command(command_name)
+    position_targets = command[:, :2]
+    distance = torch.norm(position_targets, dim=1)
+    bad_dir = command[:, 2].abs() > 0.25
+
+    # apply penalty only when far from target
+    return static * bad_dir * (distance > position_target_sigma_soft)
+
+
+###########################
+# Walk These Ways Rewards #
+###########################
+def reward_jump(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    command_name: str = "pose_command",
+    base_height_target: float = 0.3,
+) -> torch.Tensor:
+    """奖励跳跃高度接近目标值"""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    body_height = asset.data.root_pos_w[:, 2]
+    jump_height_target = env.command_manager.get_command(command_name)[:, 3] + base_height_target
+    reward = -torch.square(body_height - jump_height_target)
+
+    return reward
+
+                
+def tracking_contacts_shaped_force(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,
+    gait_force_sigma: float = 50.0,
+) -> torch.Tensor:
+    """
+    奖励脚部接触力与期望接触状态的匹配
+    """
+    contact_sensor: ContactSensor = env.scene.sensors["contact_forces"]
+    # 获取足端受力
+    foot_forces = torch.norm(contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, :], dim=-1)
+    desired_contact_states = env.desired_contact_states
+    reward = torch.zeros(env.num_envs, device=env.device)
+    for i in range(4):
+        reward += - (1 - desired_contact_states[:, i]) * (
+                    1 - torch.exp(-1 * foot_forces[:, i] ** 2 / gait_force_sigma))
+
+    return reward / 4 # 对所有脚取均值
+
+
+def tracking_contacts_shaped_vel(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    gait_vel_sigma: float = 10.0,
+) -> torch.Tensor:
+    """
+    奖励脚部速度与期望接触状态的匹配
+    """
+    asset: RigidObject = env.scene[asset_cfg.name]
+    # 获取足端速度
+    foot_velocities = torch.norm(asset.data.body_lin_vel_w[:, asset_cfg.body_ids, :], dim=-1)
+    desired_contact_states = env.desired_contact_states
+
+    reward = torch.zeros(env.num_envs, device=env.device)
+    for i in range(4):
+        reward += - ( desired_contact_states[:, i] * (
+                    1 - torch.exp(-1 * foot_velocities[:, i] ** 2 / gait_vel_sigma)))
+
+    return reward / 4 # 对所有脚取均值
+
+
+def feet_clearance_cmd_linear(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    command_name: str = "pose_command",
+) -> torch.Tensor:
+    """
+    奖励脚在摆动相时达到命令指定的高度（线性相位）
+    """
+    # phases: [num_feet]，用于区分步态周期
+    phases = 1 - torch.abs(1.0 - torch.clip((env.foot_indices * 2.0) - 1.0, 0.0, 1.0) * 2.0)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    # 获取脚的高度
+    foot_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2].view(env.num_envs, -1)
+    # 获取目标高度（命令第10维），并加上脚半径偏置
+
+    target_height = env.command_manager.get_command(command_name)[:, 9].unsqueeze(1) * phases + 0.02
+    
+    # 只对非接触脚计算奖励
+    desired_contact_states = env.desired_contact_states
+    rew_foot_clearance = torch.square(target_height - foot_height) * (1 - desired_contact_states)
+    reward = torch.sum(rew_foot_clearance, dim=1)
+    # print("foot_height:", foot_height)
+    # print("target_height:", target_height)
+    
+    return reward
+
+def reward_raibert_heuristic(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    command_name: str = "pose_command",
+    
+) -> torch.Tensor:
+    """
+    Raibert步态启发式奖励：鼓励足端位置接近启发式目标
+    """
+    asset: RigidObject = env.scene[asset_cfg.name]
+    # 足端位置转到身体坐标系
+    cur_footsteps_translated = asset.data.body_link_pos_w[:, asset_cfg.body_ids, :] - asset.data.root_link_pos_w[:, :].unsqueeze(1)
+    footsteps_in_body_frame = torch.zeros(env.num_envs, 4, 3, device=env.device)
+
+    for i in range(4):
+        # 将足端位置从世界坐标系转换到身体坐标系
+        footsteps_in_body_frame[:, i, :] = quat_apply(
+            quat_conjugate(asset.data.root_link_quat_w), cur_footsteps_translated[:, i, :]
+        )
+
+    # 期望步态宽度和长度
+    commands = env.command_manager.get_command(command_name)
+    
+    # 使用命令中的步态参数
+    desired_stance_width = commands[:, 12:13]
+    desired_stance_length = commands[:, 13:14]
+
+    desired_ys_nom = torch.cat([
+        desired_stance_width / 2, -desired_stance_width / 2,
+        desired_stance_width / 2, -desired_stance_width / 2
+    ], dim=1)
+
+    desired_xs_nom = torch.cat([
+        desired_stance_length / 2, desired_stance_length / 2,
+        -desired_stance_length / 2, -desired_stance_length / 2
+    ], dim=1)
+
+    # Raibert offsets
+    phases = torch.abs(1.0 - (env.foot_indices * 2.0)) * 1.0 - 0.5
+    frequencies = commands[:, 4]
+
+    y_vel_des = desired_stance_length / 2
+    desired_ys_offset = phases * y_vel_des * (0.5 / frequencies.unsqueeze(1))
+    desired_ys_offset[:, 2:4] *= -1    
+    desired_xs_offset = phases * (0.5 / frequencies.unsqueeze(1))
+
+    desired_ys_nom = desired_ys_nom + desired_ys_offset
+    desired_xs_nom = desired_xs_nom + desired_xs_offset
+
+    desired_footsteps_body_frame = torch.cat(
+        (desired_xs_nom.unsqueeze(2), desired_ys_nom.unsqueeze(2)), dim=2
+    )
+
+    err_raibert_heuristic = torch.abs(desired_footsteps_body_frame - footsteps_in_body_frame[:, :, 0:2])
+
+    reward = torch.sum(torch.square(err_raibert_heuristic), dim=(1, 2))
+   
+    return reward
+
+
+
+def staged_navigation_reward(
+    env: ManagerBasedRLEnv,
+    command_name: str = "pose_command",
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    sensor_cfg: SceneEntityCfg = SceneEntityCfg("ray_caster"),
+    distance_threshold: float = 0.5,   #  距离目标的阈值
+    near_goal_threshold: float = 2.0,  # 接近目标的距离阈值
+    obstacle_threshold: float = 0.8,  # 前方障碍物的距离阈值
+) -> torch.Tensor:
+
+    asset: Articulation = env.scene[asset_cfg.name]
+    ray_caster: RayCaster = env.scene[sensor_cfg.name]
+    
+    command = env.command_manager.get_command(command_name)
+    des_pos = command[:, :2] # 目标位置
+    des_heading = torch.atan2(command[:, 1], command[:, 0]).abs() # 目标朝向
+    des_heading = (des_heading - 0.15).clamp(min=0.0)  # 朝向误差阈值处理
+    distance = torch.norm(des_pos, dim=1) # 机器人到目标位置的距离
+    
+    vx = asset.data.root_lin_vel_b[:, 0] # 机器人在base frame下的前向速度
+    vy = asset.data.root_lin_vel_b[:, 1] # 机器人在base frame下的侧向速度
+       
+    # 当前移动方向与期望朝向误差（规范化到 [-pi, pi]）
+    move_dir_angle = torch.atan2(vy, vx)
+    move_heading_error = move_dir_angle.abs()
+    
+    # 雷达前方最近障碍物距离（已在外部被 clamp）
+    origin = ray_caster.data.pos_w.unsqueeze(1)  # [num_envs, 1, 3]
+    hits = ray_caster.data.ray_hits_w  # [num_envs, num_rays, 3]
+    distances = torch.norm(hits - origin, dim=-1).clamp(min=0.2, max=5.0)  # [num_envs, num_rays]
+    front_min_dist = torch.min(distances, dim=1).values  # [num_envs]
+
+    # 雷达前方距离
+    num_rays = ray_caster.data.ray_hits_w.shape[1]
+    angles = torch.linspace(-torch.pi/3, torch.pi/3, num_rays, device=env.device)
+    front_angle = torch.pi/10  # 18°
+    front_mask = (angles.abs() <= front_angle)
+    distances_ray = torch.norm(hits - origin, dim=-1).clamp_max(4)
+    front_min_dist_mask = distances_ray[:, front_mask].min(dim=1).values
+
+    # 1) 朝向匹配奖励：误差越小奖励越高
+    heading_reward = torch.exp(- (des_heading)*3) * torch.exp(- move_heading_error*3)  # 当误差小于0.5rad时，基本全量奖励，误差增大时指数衰减
+
+    # 2) 沿期望朝向的速度（越朝向目标前进越好），只奖励正向分量
+
+    progress_reward = vx.clamp(min=0.0) * torch.exp(-move_heading_error) * torch.exp(-des_heading) # 当误差小于0.5rad时，基本全量奖励前向速度，误差增大时指数衰减
+    # 3) 障碍物清除奖励：鼓励与障碍物保持距离
+    safe_min = 0.5
+    denom = max(obstacle_threshold - safe_min, 1e-6)
+    obs_clearance = torch.clamp(front_min_dist - safe_min, min=0.0, max=obstacle_threshold - safe_min) / denom  # 0..1 when front_min_dist within [safe_min, obstacle_threshold]
+    # 保持变量名兼容下游使用
+    
+    obs_approach_raw = obs_clearance + torch.where(front_min_dist_mask < safe_min, torch.exp(-vx), 0)
+
+    # 距离目标的奖励：距离越小越好，使用 near_goal_threshold 归一化尺度
+    dist_reward = torch.exp(- distance)
+
+    # 分阶段加权：远离目标优先前进与保持清除，接近目标优先朝向精确并靠近目标
+    is_far = distance > near_goal_threshold
+    is_near = torch.logical_and(distance <= near_goal_threshold, distance > distance_threshold)
+    is_at_goal = distance <= distance_threshold
+    
+    far_reward = 0.70 * progress_reward + 0.30 * heading_reward + 0.01 * obs_approach_raw + 1.0 * dist_reward
+    near_reward = 0.10 * progress_reward + 0.90 * heading_reward + 0.01 * obs_approach_raw + 1.0 * dist_reward
+    goal_reward = 0.01 * progress_reward + 0.01 * heading_reward + 0.01 * obs_approach_raw + 2.0 * torch.exp(-torch.sum(torch.abs(asset.data.joint_pos - asset.data.default_joint_pos), dim=1)) + 1.0 * dist_reward
+
+    
+    reward = torch.zeros_like(distance)
+    reward = torch.where(is_far, far_reward, reward)
+    reward = torch.where(is_near, near_reward, reward)
+    reward = torch.where(is_at_goal, goal_reward, reward)
+
+    reward = torch.clamp(reward, min=-1.0, max=2.0)
+
+    return reward
