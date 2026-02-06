@@ -132,8 +132,8 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Scene
         # ------------------------------------------------------
-        # self.scene.robot = ATOM01_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        self.scene.robot = ATOM01_LONG_BASE_LINK_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.robot = ATOM01_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        # self.scene.robot = ATOM01_LONG_BASE_LINK_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
         
         # plane terrain
@@ -149,46 +149,45 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         self.motion_data.motion_dataset.motion_data_weights={
             
             # CMU
-            # '02_02': 1, # walk
-            # '16_34': 1, # walk to stop
+            # '02_02': (1, [1.0, 0.0, 0.0]), # walk
+            # '16_34': (1, [0.5, 0.0, 0.0]), # walk to stop
             
-            # "127_03": 1, # stand to run
-            "127_04": 1, # walk to run 2.1
-            "127_06": 1, # run 3.6
-            # "143_02": 1, # run to stop
-            # "143_03": 1, # stand to run
+            # "127_03": (1, [0.0, 0.0, 0.0]), # stand to run
+            "127_04": (1, [1.8, 0.0, 0.0]), # walk to run 2.1
+            "127_06": (1, [2.5, 0.0, 0.0]), # run 3.6
+            # "143_02": (1, [0.0, 0.0, 0.0]), # run to stop
+            # "143_03": (1, [0.0, 0.0, 0.0]), # stand to run
             
             # standstill 
-            "A1-_Stand_stageii": 1,
+            "A1-_Stand_stageii": (1, [0.0, 0.0, 0.0]),
             
             
             # male2 walk
-            # "B4_-_Stand_to_Walk_backwards_stageii":1,
-            "B9_-__Walk_turn_left_90_stageii":1,
-            "B10_-__Walk_turn_left_45_stageii":1,
-            "B13_-__Walk_turn_right_90_stageii":1,
-            "B14_-__Walk_turn_right_45_t2_stageii":1,
-            # "B15_-__Walk_turn_around_stageii_turn":1,
-            "B15_-__Walk_turn_around_stageii_walk":1, # 1.2451
-            # "B22_-__side_step_left_stageii":1,
-            # "B23_-__side_step_right_stageii":1,
+            # "B4_-_Stand_to_Walk_backwards_stageii":(1, [0.0, 0.0, 0.0]),
+            "B9_-__Walk_turn_left_90_stageii":(1, [1.0, 0.0, 1.5]), # turn left
+            "B10_-__Walk_turn_left_45_stageii":(1, [1.0, 0.0, 0.75]),
+            "B13_-__Walk_turn_right_90_stageii":(1, [1.0, 0.0, -1.5]), # turn right
+            "B14_-__Walk_turn_right_45_t2_stageii":(1, [1.0, 0.0, -0.75]),
+            # "B15_-__Walk_turn_around_stageii_turn":(1, [0.0, 0.0, 0.0]), # 1.2451
+            "B15_-__Walk_turn_around_stageii_walk":(1, [1.0, 0.0, 0.0]), # 1.2451
+            # "B22_-__side_step_left_stageii":(1, [0.0, 0.0, 0.0]),
+            # "B23_-__side_step_right_stageii":(1, [0.0, 0.0, 0.0]),
             
             # male2 run
-            # "C1_-_stand_to_run_stageii": 1,
-            # "C3_-_run_stageii": 1,
-            "C4_-_run_to_walk_a_stageii": 1, # 2.3204
-            # "C4_-_run_to_walk_stageii":1,
-            # "C5_-_walk_to_run_stageii":1,
-            "C12_-_run_turn_left_45_stageii":1,
-            # "C15_-_run_turn_right_45_stageii":1,
-            "C17_-_run_change_direction_stageii":1,
+            # "C1_-_stand_to_run_stageii": (1, [0.0, 0.0, 0.0]),
+            # "C3_-_run_stageii": (1, [0.0, 0.0, 0.0]),
+            # "C4_-_run_to_walk_a_stageii": (1, [0.0, 0.0, 0.0]), # 2.3204
+            # "C4_-_run_to_walk_stageii":(1, [0.0, 0.0, 0.0]),
+            # "C5_-_walk_to_run_stageii":(1, [0.0, 0.0, 0.0]),
+            "C12_-_run_turn_left_45_stageii":(1, [2.0, 0.0, 0.75]),
+            "C17_-_run_change_direction_stageii":(1, [2.0, 0.0, -0.75]),
             
             # using GVHMR GMR
-            "move_back":1,
-            "move_l":1,
-            "move_r":1,
-            "turn_l":1,
-            "turn_r":1,
+            "move_back":(1, [-0.5, 0.0, 0.0]),
+            "move_l":(1, [0.0, 0.5, 0.0]),
+            "move_r":(1, [0.0, -0.5, 0.0]),
+            "turn_l":(1, [0.0, 0.0, 1.0]),
+            "turn_r":(1, [0.0, 0.0, -1.0]),
 
         }
         
@@ -223,11 +222,11 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # task
         self.rewards.track_lin_vel_xy_exp.weight = 1.25
         self.rewards.track_ang_vel_z_exp.weight = 1.25
-        self.rewards.alive.weight = 0.15
+        self.rewards.alive.weight = 0.5
         
         # base
         # self.rewards.lin_vel_z_l2.weight = -0.1
-        self.rewards.ang_vel_xy_l2.weight = -0.1
+        # self.rewards.ang_vel_xy_l2.weight = -0.1
         self.rewards.flat_orientation_l2.weight = -1.0
         self.rewards.base_height.weight = -10.0
         
@@ -257,21 +256,23 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Commands
         # ------------------------------------------------------
+        self.commands.base_velocity.resampling_time_range = (5.0, 10.0)
+        self.commands.base_velocity.rel_standing_envs = 0.1
         
-        # self.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.0)
-        # self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
-        # self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
-        # self.commands.base_velocity.ranges.zero_prob = (0.05, 0.05, 0.05)  # 采样零速度
+        self.commands.base_velocity.ranges.lin_vel_x = (1.2, 1.2)
+        self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
+        self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+        self.commands.base_velocity.ranges.zero_prob = (0.05, 0.05, 0.05)  # 采样零速度
 
         # self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 2.5)
         # self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
         # self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
         # self.commands.base_velocity.ranges.zero_prob = (0.5, 0.5, 0.5)  # 采样零速度
                 
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.4, 0.9)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
-        self.commands.base_velocity.ranges.zero_prob = (0.1, 0.1, 0.1)  # 采样零速度
+        # self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 0.6)
+        # self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
+        # self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
+        # self.commands.base_velocity.ranges.zero_prob = (0.2, 0.2, 0.2)  # 采样零速度
         
         # self.commands.base_velocity.ranges.lin_vel_x = (-0.0, 0.0)
         # self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)

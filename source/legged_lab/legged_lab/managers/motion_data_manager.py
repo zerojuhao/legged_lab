@@ -59,6 +59,7 @@ class MotionDataTerm(ManagerTermBase):
         self.motion_num_frames = []
         self.motion_weights = []
         self.motion_loop_modes = []
+        self.manual_avg_vels = []  # List to store manual average velocities (tensor or None)
         
         self.root_pos_w = []
         self.root_quat = []
@@ -69,7 +70,15 @@ class MotionDataTerm(ManagerTermBase):
         self.key_body_pos_w = []
 
         # only load the motion data files that are in the motion weights dict
-        for motion_name, motion_weight in self.motion_weights_dict.items():
+        for motion_name, value in self.motion_weights_dict.items():
+            # Parse value: must be tuple (weight, avg_vel)
+            if isinstance(value, (list, tuple)) and len(value) == 2:
+                motion_weight, avg_vel_list = value
+                # Convert to tensor, assume [vx, vy, wz]
+                avg_vel_tensor = torch.tensor(avg_vel_list, dtype=torch.float32, device=self.device)
+            else:
+                raise ValueError(f"Motion '{motion_name}' must specify manual velocity as tuple (weight, [vx, vy, wz]). Old format not supported.")
+
             # check if the motion file name is valid
             motion_file = f"{motion_name}.pkl"
             if motion_file not in motion_files:
@@ -97,6 +106,7 @@ class MotionDataTerm(ManagerTermBase):
             self.motion_num_frames.append(num_frames)
             self.motion_loop_modes.append(loop_mode)
             self.motion_weights.append(motion_weight)
+            self.manual_avg_vels.append(avg_vel_tensor)
             
             # Get the motion data
             
@@ -171,41 +181,9 @@ class MotionDataTerm(ManagerTermBase):
         lengths_shifted[0] = 0
         self.motion_start_indices = torch.cumsum(lengths_shifted, dim=0)
         
-        # Compute average velocity for each motion (in body frame)
-        # This is used for command-conditioned sampling
-        self._compute_motion_avg_velocities()
-        
         return
     
-    def _compute_motion_avg_velocities(self):
-        """Compute average linear and angular velocity for each motion clip.
-        
-        The velocity is computed in the body frame for command matching.
-        """
-        num_motions = self.get_num_motions()
-        
-        # Shape: (num_motions, 3) for (vx, vy, vz)
-        self.motion_avg_lin_vel_b = torch.zeros(num_motions, 3, device=self.device)
-        # Shape: (num_motions,) for yaw rate (angular velocity around z-axis)
-        self.motion_avg_ang_vel_z = torch.zeros(num_motions, device=self.device)
-        
-        for i in range(num_motions):
-            start_idx = self.motion_start_indices[i].item()
-            end_idx = start_idx + self.motion_num_frames[i].item()
-            
-            # Get velocity in world frame
-            root_vel_w = self.root_vel_w[start_idx:end_idx]  # (num_frames, 3)
-            root_ang_vel_w = self.root_ang_vel_w[start_idx:end_idx]  # (num_frames, 3)
-            root_quat = self.root_quat[start_idx:end_idx]  # (num_frames, 4)
-            
-            # Transform linear velocity to body frame
-            root_vel_b = math_utils.quat_apply_inverse(root_quat, root_vel_w)
-            
-            # Compute average
-            self.motion_avg_lin_vel_b[i] = root_vel_b.mean(dim=0)
-            self.motion_avg_ang_vel_z[i] = root_ang_vel_w[:, 2].mean()  # z-component
-         
-    # Some helper functions
+
     
     def get_num_motions(self) -> int:
         """Get the number of motions loaded."""
@@ -483,32 +461,8 @@ class MotionDataTerm(ManagerTermBase):
             return
         esp = 1e-3
         num_motions = self.get_num_motions()
-        cmd_vx = commands[:, 0]  # (n,)
-        cmd_vy = commands[:, 1]  # (n,)
-        cmd_ang_z = commands[:, 2].unsqueeze(1)  # (n,)
-    
-        # Motion velocity components: (num_motions, 3)
-        motion_vx = self.motion_avg_lin_vel_b[:, 0]  # (num_motions,)
-        motion_vy = self.motion_avg_lin_vel_b[:, 1]  # (num_motions,)
-        motion_ang_z = self.motion_avg_ang_vel_z     # (num_motions,)
-        
-        # 过滤掉微小速度，避免噪声影响
-        cmd_vx = torch.where(torch.abs(cmd_vx) < 0.2, 0, cmd_vx)
-        cmd_vy = torch.where(torch.abs(cmd_vy) < 0.2, 0, cmd_vy)
-        cmd_ang_z = torch.where(torch.abs(cmd_ang_z) < 0.2, 0, cmd_ang_z)
-        commands = torch.where(torch.abs(commands) < 0.2, 0, commands)
-    
-        motion_vx = torch.where(torch.abs(motion_vx) < 0.2, 0, motion_vx)
-        motion_vy = torch.where(torch.abs(motion_vy) < 0.2, 0, motion_vy)
-        motion_ang_z = torch.where(torch.abs(motion_ang_z) < 0.2, 0, motion_ang_z)
-
-        # motion_vy = motion_vy * 2
-
-        motion_vel = torch.stack([motion_vx, motion_vy, motion_ang_z], dim=1)  # (num_motions, 3)
-        
-        # Debug: 手动调整某些motion的速度，测试匹配效果
-        motion_vel[1,1] = 0.0
-        motion_vel[10,1] = 0.0 
+        # Motion velocity: directly from manual inputs
+        motion_vel = torch.stack(self.manual_avg_vels, dim=0)  # (num_motions, 3)
         
         # ========== 1. 方向一致性匹配过滤 ========== 
         # 只有与命令速度方向完全一致的数据集视为匹配
@@ -521,7 +475,7 @@ class MotionDataTerm(ManagerTermBase):
 
         # ========== 2. 基于速度距离分配概率 ========== 
         vel_dist = self.vel_diff(commands, motion_vel, env_ids, velocity_blend_ratio)  # (n, m)
-        scale = 1.0  # 可调参数 3
+        scale = 3.0  # 可调参数 3
         similarities = torch.exp(-vel_dist * scale)  # 距离越小，相似度越高
         # print("similarities before mask:", similarities)
         # 概率分配：

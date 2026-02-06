@@ -19,6 +19,9 @@ class MotionDataTermCfg:
     Only supports reading .pkl files from this directory.
     """
     
-    motion_data_weights: dict[str, float] = MISSING
-    """Weights for the motion data in this term."""
+    motion_data_weights: dict[str, tuple[float, list[float]]] = MISSING
+    """Weights and manual average velocities for the motion data in this term.
+    
+    Each value must be a tuple (weight, [vx, vy, wz]), where [vx, vy, wz] is the manual average velocity in body frame.
+    """
     

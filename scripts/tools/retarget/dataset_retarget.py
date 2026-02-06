@@ -32,7 +32,7 @@ parser = argparse.ArgumentParser(description="Batch retarget GMR -> Legged Lab (
 parser.add_argument(
     "--robot",
     type=str,
-    default="a1", 
+    default="atom02", 
     choices=["g1", "atom01", "atom01_long_base_link", "atom02", "a1"],
     help="Robot name to use (default: atom01_long_base_link)",
 )

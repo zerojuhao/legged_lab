@@ -13,7 +13,7 @@ from legged_lab.tasks.locomotion.amp.mdp.symmetry import atom02
 class Atom02FlatRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
     class_name = "AMPRunner"
     num_steps_per_env = 24
-    max_iterations = 5000
+    max_iterations = 8000
     save_interval = 100
     experiment_name = "atom02_amp"
     obs_groups = {
@@ -58,7 +58,7 @@ class Atom02FlatRslRlOnPolicyRunnerAmpCfg(RslRlOnPolicyRunnerCfg):
         symmetry_cfg=RslRlSymmetryCfg(
             use_data_augmentation=True,
             use_mirror_loss=True,
-            mirror_loss_coeff=0.1, # 0.1
+            mirror_loss_coeff=0.2, # 0.1
             data_augmentation_func=atom02.compute_symmetric_states
         ),
         amp_cfg=RslRlAmpCfg(

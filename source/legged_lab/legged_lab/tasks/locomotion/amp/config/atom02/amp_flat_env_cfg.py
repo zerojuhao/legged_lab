@@ -16,10 +16,10 @@ from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 
 # The order must align with the retarget config file scripts/tools/retarget/config/g1_29dof.yaml
 KEY_BODY_NAMES = [
-    "left_elbow_yaw_link", 
-    "right_elbow_yaw_link",
-    "left_shoulder_roll_link",
-    "right_shoulder_roll_link",
+    "left_elbow_link", 
+    "right_elbow_link",
+    "left_wrist_link",
+    "right_wrist_link",
     # "left_knee_link",
     # "right_knee_link",
 ] # if changed here and symmetry is enabled, remember to update amp.mdp.symmetry.g1 as well!
@@ -55,7 +55,7 @@ class Rewards():
         func=mdp.body_ang_vel_xy_l2,
         weight=0.0,
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=["torso_yaw_link"]),
+            "asset_cfg": SceneEntityCfg("robot", body_names=["waist_yaw_link"]),
         },
     )
     
@@ -63,7 +63,7 @@ class Rewards():
         func=mdp.body_flat_orientation_l2,
         weight=0.0,
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=["torso_yaw_link"]),
+            "asset_cfg": SceneEntityCfg("robot", body_names=["waist_yaw_link"]),
         },
     )
 
@@ -154,47 +154,46 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         )
         self.motion_data.motion_dataset.motion_data_weights={
             
-            # # # 4
-            # '02_02': 1, # walk
-            # '16_34': 1, # walk to stop
+            # CMU
+            # '02_02': (1, [1.0, 0.0, 0.0]), # walk
+            # '16_34': (1, [0.5, 0.0, 0.0]), # walk to stop
             
-            # "127_03": 1, # stand to run
-            "127_04": 1, # walk to run 2.1
-            "127_06": 1, # run 3.6
-            # "143_02": 1, # run to stop
-            # "143_03": 1, # stand to run
+            # "127_03": (1, [0.0, 0.0, 0.0]), # stand to run
+            # "127_04": (1, [1.8, 0.0, 0.0]), # walk to run 2.1
+            # "127_06": (1, [2.5, 0.0, 0.0]), # run 3.6
+            # "143_02": (1, [0.0, 0.0, 0.0]), # run to stop
+            # "143_03": (1, [0.0, 0.0, 0.0]), # stand to run
             
-            # # # standstill 1
-            "A1-_Stand_stageii": 1,
+            # standstill 
+            "A1-_Stand_stageii": (1, [0.0, 0.0, 0.0]),
             
             
-            # # # male2 walk 8
-            # "B4_-_Stand_to_Walk_backwards_stageii":1,
-            "B9_-__Walk_turn_left_90_stageii":1,
-            "B10_-__Walk_turn_left_45_stageii":1,
-            "B13_-__Walk_turn_right_90_stageii":1,
-            "B14_-__Walk_turn_right_45_t2_stageii":1,
-            # "B15_-__Walk_turn_around_stageii_turn":1,
-            "B15_-__Walk_turn_around_stageii_walk":1, # 1.2451
-            # "B22_-__side_step_left_stageii":1,
-            # "B23_-__side_step_right_stageii":1,
+            # male2 walk
+            # "B4_-_Stand_to_Walk_backwards_stageii":(1, [0.0, 0.0, 0.0]),
+            "B9_-__Walk_turn_left_90_stageii":(1, [1.0, 0.0, 1.5]), # turn left
+            "B10_-__Walk_turn_left_45_stageii":(1, [1.0, 0.0, 0.75]),
+            "B13_-__Walk_turn_right_90_stageii":(1, [1.0, 0.0, -1.5]), # turn right
+            "B14_-__Walk_turn_right_45_t2_stageii":(1, [1.0, 0.0, -0.75]),
+            # "B15_-__Walk_turn_around_stageii_turn":(1, [0.0, 0.0, 0.0]), # 1.2451
+            "B15_-__Walk_turn_around_stageii_walk":(1, [1.0, 0.0, 0.0]), # 1.2451
+            # "B22_-__side_step_left_stageii":(1, [0.0, 0.0, 0.0]),
+            # "B23_-__side_step_right_stageii":(1, [0.0, 0.0, 0.0]),
             
-            # # male2 run 8
-            # "C1_-_stand_to_run_stageii": 1,
-            # "C3_-_run_stageii": 1,
-            "C4_-_run_to_walk_a_stageii": 1, # 2.3204
-            # "C4_-_run_to_walk_stageii":1,
-            # "C5_-_walk_to_run_stageii":1,
-            "C12_-_run_turn_left_45_stageii":1,
-            # "C15_-_run_turn_right_45_stageii":1,
-            "C17_-_run_change_direction_stageii":1,
+            # male2 run
+            # "C1_-_stand_to_run_stageii": (1, [0.0, 0.0, 0.0]),
+            # "C3_-_run_stageii": (1, [0.0, 0.0, 0.0]),
+            # "C4_-_run_to_walk_a_stageii": (1, [0.0, 0.0, 0.0]), # 2.3204
+            # "C4_-_run_to_walk_stageii":(1, [0.0, 0.0, 0.0]),
+            # "C5_-_walk_to_run_stageii":(1, [0.0, 0.0, 0.0]),
+            # "C12_-_run_turn_left_45_stageii":(1, [1.8, 0.0, 0.75]),
+            # "C17_-_run_change_direction_stageii":(1, [1.8, 0.0, -0.75]),
             
-            # # 自设动作 1
-            "move_back":1,
-            "move_l":1,
-            "move_r":1,
-            "turn_l":1,
-            "turn_r":1,
+            # using GVHMR GMR
+            "move_back":(1, [-0.5, 0.0, 0.0]),
+            "move_l":(1, [0.0, 0.5, 0.0]),
+            "move_r":(1, [0.0, -0.5, 0.0]),
+            "turn_l":(1, [0.0, 0.0, 1.5]),
+            "turn_r":(1, [0.0, 0.0, -1.5]),
 
         }
         
@@ -204,6 +203,7 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         self.animation.animation.num_steps_to_use = AMP_NUM_STEPS
 
         # ------------------------------------------------------
+        
         # Observations
         # ------------------------------------------------------
                 
@@ -221,24 +221,24 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Events
         # ------------------------------------------------------
-        self.events.randomize_rigid_body_com.params["asset_cfg"].body_names = ["torso_roll_link", "torso_yaw_link", "base_link"]
-        self.events.base_external_force_torque.params["asset_cfg"].body_names = ["torso_roll_link", "torso_yaw_link"]
+        self.events.randomize_rigid_body_com.params["asset_cfg"].body_names = ["waist_roll_link", "waist_yaw_link", "base_link"]
+        self.events.base_external_force_torque.params["asset_cfg"].body_names = ["waist_roll_link", "waist_yaw_link"]
         # ------------------------------------------------------
         # Rewards
         # ------------------------------------------------------
         # task
         self.rewards.track_lin_vel_xy_exp.weight = 1.25
         self.rewards.track_ang_vel_z_exp.weight = 1.25
-        self.rewards.alive.weight = 0.15
+        self.rewards.alive.weight = 0.5
         
         # base
         # self.rewards.lin_vel_z_l2.weight = -0.1
         # self.rewards.ang_vel_xy_l2.weight = -0.1 # 0.1
-        # self.rewards.flat_orientation_l2.weight = -1.0
+        self.rewards.flat_orientation_l2.weight = -1.0
         self.rewards.base_height.weight = -10.0
         
-        self.rewards.body_ang_vel_xy_l2.weight = -0.1
-        self.rewards.body_flat_orientation_l2.weight = -1.0
+        self.rewards.body_ang_vel_xy_l2.weight = -0.5
+        self.rewards.body_flat_orientation_l2.weight = -5.0
         
         # joint
         self.rewards.joint_vel_l2.weight = -2e-4
@@ -267,7 +267,7 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # Commands
         # ------------------------------------------------------
         
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.4, 0.9)
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 0.9)
         self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
         self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
         self.commands.base_velocity.ranges.zero_prob = (0.1, 0.1, 0.1)  # 采样零速度
@@ -281,6 +281,8 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Curriculum
         # ------------------------------------------------------
+        self.curriculum.lin_vel_cmd_levels.params["lin_vel_x_limit"] = [-0.5, 1.2]
+        
         
         # self.terminations.base_contact.params["sensor_cfg"].body_names = [
         #     ".*_thigh_.*_link", "base_link", ".*_shoulder_.*_link", ".*_elbow_.*_link",

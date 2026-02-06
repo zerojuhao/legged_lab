@@ -7,7 +7,7 @@ parser = argparse.ArgumentParser(description="Visulization of retargeted data.")
 parser.add_argument(
     "--robot", 
     type=str,
-    default="a1",
+    default="atom02",
     help="The robot name to be used.",
     choices=["g1", "a1", "atom01", "atom01_long_base_link", "atom02"],
 )
