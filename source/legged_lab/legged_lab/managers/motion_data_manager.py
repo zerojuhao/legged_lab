@@ -345,53 +345,53 @@ class MotionDataTerm(ManagerTermBase):
         
         return sample_times
 
-    def fa(
-        self,
-        velocity: torch.Tensor,
-    ) -> torch.Tensor:
-        """支持 2D (n, 3) 或 3D (n, m, 3) 张量"""
-        esp = 1e-3
-        x = velocity[..., 0].abs()
-        y = velocity[..., 1].abs()
-        z = velocity[..., 2].abs()
-        value = y*z / (x + esp) + x*z / (y + esp) + x*y / (z + esp)
-        return value
+    # def fa(
+    #     self,
+    #     velocity: torch.Tensor,
+    # ) -> torch.Tensor:
+    #     """支持 2D (n, 3) 或 3D (n, m, 3) 张量"""
+    #     esp = 1e-3
+    #     x = velocity[..., 0].abs()
+    #     y = velocity[..., 1].abs()
+    #     z = velocity[..., 2].abs()
+    #     value = y*z / (x + esp) + x*z / (y + esp) + x*y / (z + esp)
+    #     return value
     
-    def fb(
-        self,
-        velocity: torch.Tensor,
-    ) -> torch.Tensor:
-        """支持 2D (n, 3) 或 3D (n, m, 3) 张量"""
-        esp = 1e-3
-        x = velocity[..., 0].abs()
-        y = velocity[..., 1].abs()
-        z = velocity[..., 2].abs()
-        value = y*z / (x + esp) * x*z / (y + esp) * x*y / (z + esp)
-        return value
+    # def fb(
+    #     self,
+    #     velocity: torch.Tensor,
+    # ) -> torch.Tensor:
+    #     """支持 2D (n, 3) 或 3D (n, m, 3) 张量"""
+    #     esp = 1e-3
+    #     x = velocity[..., 0].abs()
+    #     y = velocity[..., 1].abs()
+    #     z = velocity[..., 2].abs()
+    #     value = y*z / (x + esp) * x*z / (y + esp) * x*y / (z + esp)
+    #     return value
 
-    def cosine_distance(
-        self,
-        commands: torch.Tensor,
-        motion_vel: torch.Tensor,
-        eps: float = 1e-6,
-    ) -> torch.Tensor:
-        """计算余弦距离矩阵
+    # def cosine_distance(
+    #     self,
+    #     commands: torch.Tensor,
+    #     motion_vel: torch.Tensor,
+    #     eps: float = 1e-6,
+    # ) -> torch.Tensor:
+    #     """计算余弦距离矩阵
         
-        Args:
-            commands: (n, 3)
-            motion_vel: (m, 3)
-        Returns:
-            (n, m) 余弦距离矩阵
-        """
-        # 矩阵乘法计算所有点积
+    #     Args:
+    #         commands: (n, 3)
+    #         motion_vel: (m, 3)
+    #     Returns:
+    #         (n, m) 余弦距离矩阵
+    #     """
+    #     # 矩阵乘法计算所有点积
 
-        dot_product = torch.matmul(commands, motion_vel.t())  # (n, m)
-        commands_norm = torch.norm(commands, dim=1, keepdim=True)  # (n, 1)
-        motion_vel_norm = torch.norm(motion_vel, dim=1, keepdim=True)
-        norms_product = torch.matmul(commands_norm, motion_vel_norm.t())  # (n, m)
-        cosine_similarity = dot_product / (norms_product + eps)  # (n, m)
-        cosine_distance = 1.0 - cosine_similarity  # (n, m)
-        return cosine_distance
+    #     dot_product = torch.matmul(commands, motion_vel.t())  # (n, m)
+    #     commands_norm = torch.norm(commands, dim=1, keepdim=True)  # (n, 1)
+    #     motion_vel_norm = torch.norm(motion_vel, dim=1, keepdim=True)
+    #     norms_product = torch.matmul(commands_norm, motion_vel_norm.t())  # (n, m)
+    #     cosine_similarity = dot_product / (norms_product + eps)  # (n, m)
+    #     cosine_distance = 1.0 - cosine_similarity  # (n, m)
+    #     return cosine_distance
     
     def vel_diff(
         self,

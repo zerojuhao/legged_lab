@@ -32,13 +32,14 @@ class Rewards():
 
     # -- Task
     track_lin_vel_xy_exp = RewTerm(
-        func=mdp.track_lin_vel_xy_exp,
+        func=mdp.track_lin_vel_xy_exp_projected_gravity,
         weight=0,
         params={"command_name": "base_velocity", "std": 0.5},
     )
     track_ang_vel_z_exp = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=0, params={"command_name": "base_velocity", "std": 0.5}
+        func=mdp.track_ang_vel_z_exp_projected_gravity, weight=0, params={"command_name": "base_velocity", "std": 0.5}
     )
+    
     
     
     # -- Alive
@@ -146,6 +147,8 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         self.scene.terrain.terrain_type = "plane"
         self.scene.terrain.terrain_generator = None
 
+        self.actions.joint_pos.scale = {"waist_.*_joint": 0.125, "^(?!waist_.*_joint).*": 0.25}
+
         # ------------------------------------------------------
         # motion data
         # ------------------------------------------------------
@@ -159,8 +162,8 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
             # '16_34': (1, [0.5, 0.0, 0.0]), # walk to stop
             
             # "127_03": (1, [0.0, 0.0, 0.0]), # stand to run
-            # "127_04": (1, [1.8, 0.0, 0.0]), # walk to run 2.1
-            # "127_06": (1, [2.5, 0.0, 0.0]), # run 3.6
+            "127_04": (1, [1.8, 0.0, 0.0]), # walk to run 2.1
+            "127_06": (1, [2.5, 0.0, 0.0]), # run 3.6
             # "143_02": (1, [0.0, 0.0, 0.0]), # run to stop
             # "143_03": (1, [0.0, 0.0, 0.0]), # stand to run
             
@@ -185,13 +188,13 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
             # "C4_-_run_to_walk_a_stageii": (1, [0.0, 0.0, 0.0]), # 2.3204
             # "C4_-_run_to_walk_stageii":(1, [0.0, 0.0, 0.0]),
             # "C5_-_walk_to_run_stageii":(1, [0.0, 0.0, 0.0]),
-            # "C12_-_run_turn_left_45_stageii":(1, [1.8, 0.0, 0.75]),
-            # "C17_-_run_change_direction_stageii":(1, [1.8, 0.0, -0.75]),
+            "C12_-_run_turn_left_45_stageii":(1, [2.5, 0.0, 0.75]),
+            "C17_-_run_change_direction_stageii":(1, [2.5, 0.0, -0.75]),
             
             # using GVHMR GMR
-            "move_back":(1, [-0.5, 0.0, 0.0]),
-            "move_l":(1, [0.0, 0.5, 0.0]),
-            "move_r":(1, [0.0, -0.5, 0.0]),
+            # "move_back":(1, [-0.5, 0.0, 0.0]),
+            # "move_l":(1, [0.0, 0.5, 0.0]),
+            # "move_r":(1, [0.0, -0.5, 0.0]),
             "turn_l":(1, [0.0, 0.0, 1.5]),
             "turn_r":(1, [0.0, 0.0, -1.5]),
 
@@ -229,16 +232,16 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # task
         self.rewards.track_lin_vel_xy_exp.weight = 1.25
         self.rewards.track_ang_vel_z_exp.weight = 1.25
-        self.rewards.alive.weight = 0.5
+        self.rewards.alive.weight = 0.15
         
         # base
         # self.rewards.lin_vel_z_l2.weight = -0.1
         # self.rewards.ang_vel_xy_l2.weight = -0.1 # 0.1
-        self.rewards.flat_orientation_l2.weight = -1.0
+        # self.rewards.flat_orientation_l2.weight = -1.0
         self.rewards.base_height.weight = -10.0
         
-        self.rewards.body_ang_vel_xy_l2.weight = -0.5
-        self.rewards.body_flat_orientation_l2.weight = -5.0
+        self.rewards.body_ang_vel_xy_l2.weight = -0.1
+        self.rewards.body_flat_orientation_l2.weight = -1.0
         
         # joint
         self.rewards.joint_vel_l2.weight = -2e-4
@@ -247,14 +250,13 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         self.rewards.joint_pos_limits.weight = -5.0
         self.rewards.joint_energy.weight = -1e-4
         self.rewards.joint_torques_l2.weight = -1e-5
-        self.rewards.joint_regularization.weight = -1e-4
+        # self.rewards.joint_regularization.weight = -1e-4
         # self.rewards.low_speed_sway_penalty.weight = -1e-2
         
         # feet
         self.rewards.feet_slide.weight = -0.2
-        self.rewards.feet_stumble.weight = -0.1
+        # self.rewards.feet_stumble.weight = -0.2
         # self.rewards.sound_suppression.weight = -5e-3
-        # self.rewards.feet_air_time_positive_biped.weight = 1.0
 
 
         self.rewards.undesired_contacts.weight = -1.0
@@ -266,11 +268,16 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Commands
         # ------------------------------------------------------
+
+        # self.commands.base_velocity.ranges.lin_vel_x = (0.9, 0.9)
+        # self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
+        # self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
+        # self.commands.base_velocity.ranges.zero_prob = (0.1, 0.1, 0.1)  # 采样零速度
         
-        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 0.9)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.0, 0.9)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
         self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
-        self.commands.base_velocity.ranges.zero_prob = (0.1, 0.1, 0.1)  # 采样零速度
+        self.commands.base_velocity.ranges.zero_prob = (0.2, 0.2, 0.2)  # 采样零速度
                 
                 
         # self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 2.5)
@@ -281,12 +288,13 @@ class Atom02AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Curriculum
         # ------------------------------------------------------
-        self.curriculum.lin_vel_cmd_levels.params["lin_vel_x_limit"] = [-0.5, 1.2]
+        self.curriculum.lin_vel_cmd_levels.params["lin_vel_x_limit"] = [-0.0, 2.5]
+        self.curriculum.lin_vel_cmd_levels.params["lin_vel_y_limit"] = [-0.0, 0.0]
+
         
-        
-        # self.terminations.base_contact.params["sensor_cfg"].body_names = [
-        #     ".*_thigh_.*_link", "base_link", ".*_shoulder_.*_link", ".*_elbow_.*_link",
-        # ]
+        self.terminations.base_contact.params["sensor_cfg"].body_names = [
+            ".*_hip_.*_link", "base_link", ".*_shoulder_.*_link", ".*_elbow_link", ".*_wrist_link",
+        ]
         if self.__class__.__name__ == "Atom02AmpFlatEnvCfg":
             self.disable_zero_weight_rewards()
             
@@ -302,9 +310,11 @@ class Atom02AmpFlatEnvCfg_PLAY(Atom02AmpFlatEnvCfg):
         self.scene.env_spacing = 2.5
         self.episode_length_s = 40.0
 
-        self.commands.base_velocity.ranges.lin_vel_x = (0, 0)
+        self.commands.base_velocity.ranges.lin_vel_x = (1, 1)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
         self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
+        self.commands.base_velocity.ranges.zero_prob = (0.0, 0.0, 0.0)
+        self.commands.base_velocity.rel_standing_envs = 0 
 
         self.events.reset_robot_joints.params["position_range"] = (1,1)
         self.events.reset_robot_joints.params["velocity_range"] = (0,0)

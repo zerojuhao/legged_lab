@@ -171,7 +171,6 @@ class ObservationsCfg():
         # root_local_rot_tan_norm = ObsTerm(func=mdp.root_local_rot_tan_norm)
         # base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
-        # velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
         joint_pos = ObsTerm(func=mdp.joint_pos)
         joint_vel = ObsTerm(func=mdp.joint_vel)
         # key_body_pos_b = ObsTerm(
@@ -335,12 +334,6 @@ class EventCfg:
         },
     )
 
-    # reset_from_ref = EventTerm(
-    #     func=mdp.reset_from_ref, 
-    #     mode="reset",
-    #     params=MISSING
-    # )
-
     # # interval
 
     reset_base=EventTerm(
@@ -406,6 +399,7 @@ class RewardsCfg:
         weight=-1.0,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*THIGH"), "threshold": 1.0},
     )
+    
     # -- optional penalties
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=0.0)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=0.0)
@@ -416,10 +410,10 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    # base_contact = DoneTerm(
-    #     func=mdp.illegal_contact,
-    #     params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=MISSING), "threshold": 1.0},
-    # )
+    base_contact = DoneTerm(
+        func=mdp.illegal_contact,
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=MISSING), "threshold": 1.0},
+    )
     base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.3})
     bad_orientation = DoneTerm(
         func=mdp.bad_orientation, 

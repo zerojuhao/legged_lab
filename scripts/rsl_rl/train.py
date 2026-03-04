@@ -101,7 +101,7 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 # Import extensions to set up environment tasks
-import legged_lab.tasks  # noqa: F401
+# import legged_lab.tasks  # noqa: F401
 
 # import logger
 logger = logging.getLogger(__name__)

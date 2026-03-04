@@ -144,7 +144,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # motion data
         # ------------------------------------------------------
         self.motion_data.motion_dataset.motion_data_dir = os.path.join(
-            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "atom01_long_lab"
+            LEGGED_LAB_ROOT_DIR, "data", "MotionData", "atom01_lab"
         )
         self.motion_data.motion_dataset.motion_data_weights={
             
@@ -186,8 +186,8 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
             "move_back":(1, [-0.5, 0.0, 0.0]),
             "move_l":(1, [0.0, 0.5, 0.0]),
             "move_r":(1, [0.0, -0.5, 0.0]),
-            "turn_l":(1, [0.0, 0.0, 1.0]),
-            "turn_r":(1, [0.0, 0.0, -1.0]),
+            "turn_l":(1, [0.0, 0.0, 1.5]),
+            "turn_r":(1, [0.0, 0.0, -1.5]),
 
         }
         
@@ -222,7 +222,7 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # task
         self.rewards.track_lin_vel_xy_exp.weight = 1.25
         self.rewards.track_ang_vel_z_exp.weight = 1.25
-        self.rewards.alive.weight = 0.5
+        self.rewards.alive.weight = 0.15
         
         # base
         # self.rewards.lin_vel_z_l2.weight = -0.1
@@ -238,13 +238,11 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         self.rewards.joint_energy.weight = -1e-4
         self.rewards.joint_torques_l2.weight = -1e-5
         self.rewards.joint_regularization.weight = -1e-4
-        # self.rewards.low_speed_sway_penalty.weight = -1e-2
         
         # feet
-        self.rewards.feet_slide.weight = -0.2
+        self.rewards.feet_slide.weight = -0.1
         self.rewards.feet_stumble.weight = -0.1
         # self.rewards.sound_suppression.weight = -5e-4
-        # self.rewards.feet_air_time_positive_biped.weight = 1.0
 
 
         self.rewards.undesired_contacts.weight = -1.0
@@ -259,20 +257,20 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         self.commands.base_velocity.resampling_time_range = (5.0, 10.0)
         self.commands.base_velocity.rel_standing_envs = 0.1
         
-        self.commands.base_velocity.ranges.lin_vel_x = (1.2, 1.2)
-        self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-        self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
-        self.commands.base_velocity.ranges.zero_prob = (0.05, 0.05, 0.05)  # 采样零速度
+        # self.commands.base_velocity.ranges.lin_vel_x = (1.0, 1.0)
+        # self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
+        # self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+        # self.commands.base_velocity.ranges.zero_prob = (0.1, 0.1, 0.1)  # 采样零速度
 
         # self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 2.5)
         # self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
         # self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
         # self.commands.base_velocity.ranges.zero_prob = (0.5, 0.5, 0.5)  # 采样零速度
                 
-        # self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 0.6)
-        # self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        # self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
-        # self.commands.base_velocity.ranges.zero_prob = (0.2, 0.2, 0.2)  # 采样零速度
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.5, 1.0)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
+        self.commands.base_velocity.ranges.zero_prob = (0.2, 0.2, 0.2)  # 采样零速度
         
         # self.commands.base_velocity.ranges.lin_vel_x = (-0.0, 0.0)
         # self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)
@@ -283,10 +281,13 @@ class Atom01AmpFlatEnvCfg(LocomotionAmpEnvCfg):
         # ------------------------------------------------------
         # Curriculum
         # ------------------------------------------------------
+        self.curriculum.lin_vel_cmd_levels.params["lin_vel_x_limit"] = [-0.5, 4.0]
+        self.curriculum.lin_vel_cmd_levels.params["lin_vel_y_limit"] = [-0.5, 0.5]
         
-        # self.terminations.base_contact.params["sensor_cfg"].body_names = [
-        #     ".*_thigh_.*_link", "base_link", ".*_arm_.*_link", ".*_elbow_.*_link",
-        # ]
+        self.terminations.base_contact.params["sensor_cfg"].body_names = [
+            ".*_thigh_.*_link", "base_link", ".*_arm_.*_link", ".*_elbow_.*_link",
+        ]
+        
         if self.__class__.__name__ == "Atom01AmpFlatEnvCfg":
             self.disable_zero_weight_rewards()
             
@@ -302,7 +303,7 @@ class Atom01AmpFlatEnvCfg_PLAY(Atom01AmpFlatEnvCfg):
         self.scene.env_spacing = 2.5
         self.episode_length_s = 40.0
 
-        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.0)
+        self.commands.base_velocity.ranges.lin_vel_x = (1.0, 1.0)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
         self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
 

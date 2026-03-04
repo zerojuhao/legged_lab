@@ -343,7 +343,7 @@ def run_mujoco(policy, cfg, headless=False):
         tau = pd_control(target_pos, q, cfg.robot_config.kps,
                         target_vel, dq, cfg.robot_config.kds)  # Calc torques
         tau = np.clip(tau, -cfg.robot_config.tau_limit, cfg.robot_config.tau_limit)  # Clamp torques
-        # data.ctrl = tau
+        data.ctrl = tau
         mujoco.mj_step(model, data)
 
         count_lowlevel += 1
@@ -455,8 +455,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Deployment script.')
     parser.add_argument('--load_model', 
                         # type=str, 
-                        default="/home/msi/Desktop/policy.pt",
-                        # default="logs/rsl_rl/atom02_amp/2026-01-08_15-33-22/exported/policy.pt",
+                        default="/home/msi/桌面/policy.pt",
+                        # default="/home/msi/桌面/legged_lab/logs/rsl_rl/atom02_amp/2026-02-10_17-52-52/exported/policy.pt",
                         help='Run to load from.')
     parser.add_argument('--terrain', action='store_true', default='plane', help='terrain or plane')
     parser.add_argument('--headless', action='store_true', help='Run without GUI and save video')
@@ -474,7 +474,7 @@ if __name__ == '__main__':
         class robot_config:
             kps = np.array([100, 100, 100, 150,  40,  40, 100, 100, 100, 150,  40,  40, 150, 150,  40,  40,  40,  30,  20,  40,  40,  40,  30,  20], dtype=np.double)
             kds = np.array([3.3, 3.3, 3.3, 5.0, 2.0, 2.0, 3.3, 3.3, 3.3, 5.0, 2.0, 2.0, 5.0, 5.0, 2.0, 2.0, 2.0, 1.5, 1.0, 2.0, 2.0, 2.0, 1.5, 1.0], dtype=np.double)
-            default_pos = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0, 0, 0, 0, -0.0, 0, -0.0, 0], dtype=np.double)
+            default_pos = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 1.57, 0, 0, -0.3, -0.0, -1.57, 0], dtype=np.double)
             # default_pos = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=np.double)
 
             tau_limit = 200. * np.ones(24, dtype=np.double)

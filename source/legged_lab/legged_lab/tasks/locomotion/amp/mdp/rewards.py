@@ -300,6 +300,15 @@ def feet_slide(
     reward = torch.sum(foot_leteral_vel * contacts, dim=1)
     return reward
 
+def feet_stumble(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+    # extract the used quantities (to enable type-hinting)
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    forces_z = torch.abs(contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, 2])
+    forces_xy = torch.linalg.norm(contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, :2], dim=2)
+    # Penalize feet hitting vertical surfaces
+    reward = torch.any(forces_xy > 4 * forces_z, dim=1).float()
+    return reward
+
 def upward(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Penalize z-axis base linear velocity using L2 squared kernel."""
     # extract the used quantities (to enable type-hinting)
@@ -428,6 +437,7 @@ def body_ang_vel_xy_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = Scene
     asset: Articulation = env.scene[asset_cfg.name]
     # compute the penalty for xy angular velocities
     ang_vel_xy = asset.data.body_ang_vel_w[:, asset_cfg.body_ids, :2]
+    # print("ang_vel_xy:", ang_vel_xy)
     return torch.sum(torch.square(ang_vel_xy), dim=[1, 2])
 
 
